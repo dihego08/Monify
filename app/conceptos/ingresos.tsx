@@ -16,18 +16,23 @@ export default function ConceptosIngresos() {
         const _conceptos = await getConceptosIngreso();
         setConceptos(_conceptos as { id: number; concepto: string; activo: number }[]);
     };
-    const guardarCambios = () => {
+    const guardarCambios = async () => {
         if (conceptoIngreso.trim() === "") {
-            alert("Por favor, ingrese un concepto de ingreso");
+            alert("Por favor, ingrese un concepto de Ingreso");
             return;
         } else {
-            // Lógica para guardar el concepto de ingreso en la base de datos
-            guardarConceptoIngreso(conceptoIngreso);
+            // Lógica para guardar el concepto de egreso en la base de datos    
+            var res = await guardarConceptoIngreso(conceptoIngreso);
+            limpiarCampo();
+            cargarDatos();
         }
-        alert("Concepto de ingreso guardado correctamente ✅");
+        alert("Concepto de Ingreso guardado correctamente ✅");
     };
     // Lógica para guardar el concepto de ingreso en la base de datos
 
+    const limpiarCampo = () => {
+        setConceptoIngreso("");
+    };
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Registrar Conceptos de Ingresos</Text>
