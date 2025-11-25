@@ -713,7 +713,27 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    menuContainer: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding:
+   menuContainer: {
+    width: 200,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 4,
+    elevation: 10,
+},
+menuOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+},
+menuText: {
+    fontSize: 15,
+    fontWeight: "600",
+},
+menuSeparator: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginVertical: 2,
+},
+});
