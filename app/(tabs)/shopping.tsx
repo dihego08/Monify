@@ -7,7 +7,7 @@ import {
     Plus,
     ShoppingCart,
     Trash2,
-    X
+    X, List
 } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
@@ -29,24 +29,33 @@ import {
     getEstadisticasCompras,
     getListaCompras,
     marcarComoComprado,
-    toggleComprado
+    toggleComprado,
+    agregarListaCompra
 } from "../services/comprasService";
 
 export default function ShoppingScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalCompraVisible, setModalCompraVisible] = useState(false);
+    const [modalVisibleLista, setModalVisibleLista] = useState(false);
+    const [modalCompraListaVisible, setModalCompraListaVisible] = useState(false);
     const [categorias, setCategorias] = useState<any[]>([]);
     const [items, setItems] = useState<any[]>([]);
+    const [itemsLista, setItemsLista] = useState<any[]>([]);
     const [estadisticas, setEstadisticas] = useState<any>({});
-    
+
     // Estados para el formulario
     const [itemNombre, setItemNombre] = useState("");
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
+
     const [notas, setNotas] = useState("");
     const [precio, setPrecio] = useState("");
     const [itemSeleccionado, setItemSeleccionado] = useState<any>(null);
     const [modoEdicion, setModoEdicion] = useState(false);
-    
+
+    //formulario nueva lista
+    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
+    const [nombreLista, setNombreLista] = useState("");
+    const [listaSeleccionada, setListaSeleccionada] = useState<any>(null);
+
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
     const [soloNoComprados, setSoloNoComprados] = useState(false);
@@ -62,7 +71,8 @@ export default function ShoppingScreen() {
             const listaCategorias = await getCategoriasCompras();
             setCategorias(listaCategorias);
 
-            const listaItems = await getListaCompras(soloNoComprados);
+            const listaItems = await getListaCompras();
+            console.log(listaItems);
             setItems(listaItems);
 
             const stats = await getEstadisticasCompras();
@@ -87,6 +97,14 @@ export default function ShoppingScreen() {
         setModalVisible(true);
     };
 
+    const abrirModalNuevaLista = () => {
+        //setModoEdicion(false);
+        //setItemNombre("");
+        setCategoriaSeleccionada("");
+        //setNotas("");
+        setModalVisibleLista(true);
+    };
+
     const abrirModalEditar = (item: any) => {
         setModoEdicion(true);
         setItemSeleccionado(item);
@@ -98,7 +116,33 @@ export default function ShoppingScreen() {
     };
 
     const guardarItem = async () => {
-        if (!itemNombre.trim() || !categoriaSeleccionada) {
+        console.log("OTRO HERE");
+        console.log(listaSeleccionada);
+
+        if (!itemNombre.trim()) {
+            Alert.alert("Error", "Completa el nombre del item.");
+            return;
+        }
+
+        try {
+            if (modoEdicion && itemSeleccionado) {
+                await editarItemCompra(itemSeleccionado.id, itemNombre, itemSeleccionado.id, notas);
+                Alert.alert("Éxito", "Item actualizado correctamente");
+            } else {
+                await agregarItemCompra(nombreLista, listaSeleccionada.id, notas);
+                Alert.alert("Éxito", "Item agregado a la lista");
+            }
+
+            setModalVisible(false);
+            await cargarDatos();
+        } catch (error) {
+            console.error('Error al guardar:', error);
+            Alert.alert("Error", "No se pudo guardar el item");
+        }
+    };
+
+    const guardarLista = async () => {
+        if (!nombreLista.trim() || !categoriaSeleccionada) {
             Alert.alert("Error", "Completa el nombre del item y categoría");
             return;
         }
@@ -108,11 +152,11 @@ export default function ShoppingScreen() {
                 await editarItemCompra(itemSeleccionado.id, itemNombre, categoriaSeleccionada, notas);
                 Alert.alert("Éxito", "Item actualizado correctamente");
             } else {
-                await agregarItemCompra(itemNombre, categoriaSeleccionada, notas);
+                await agregarListaCompra(itemNombre, categoriaSeleccionada, notas);
                 Alert.alert("Éxito", "Item agregado a la lista");
             }
 
-            setModalVisible(false);
+            setModalVisibleLista(false);
             await cargarDatos();
         } catch (error) {
             console.error('Error al guardar:', error);
@@ -126,6 +170,22 @@ export default function ShoppingScreen() {
             setItemSeleccionado(item);
             setPrecio("");
             setModalCompraVisible(true);
+        } else {
+            // Si va a desmarcar, simplemente toggle
+            await toggleComprado(item.id);
+            await cargarDatos();
+        }
+    };
+
+    const handleToggleLista = async (item: any) => {
+        console.log("HERE");
+        console.log(item);
+        setItemSeleccionado(item);
+        if (!item.comprado) {
+            // Si va a marcar como comprado, preguntar por el precio
+            setListaSeleccionada(item);
+            //setPrecio("");
+            setModalCompraListaVisible(true);
         } else {
             // Si va a desmarcar, simplemente toggle
             await toggleComprado(item.id);
@@ -174,7 +234,7 @@ export default function ShoppingScreen() {
         );
     };
 
-    const renderItem = ({ item }: { item: any }) => (
+    const renderItemElemento = ({ item }: { item: any }) => (
         <View style={[styles.itemCard, item.comprado === 1 && styles.itemCardComprado]}>
             <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
@@ -203,6 +263,87 @@ export default function ShoppingScreen() {
                     ) : (
                         <View style={styles.uncheckedCircle} />
                     )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.menuButton}
+                    onPress={() => setMenuVisibleId(item.id)}
+                >
+                    <MoreVertical color="#9ca3af" size={20} />
+                </TouchableOpacity>
+            </View>
+
+            {item.comprado === 1 && item.precio && (
+                <View style={styles.cardFooter}>
+                    <Text style={styles.cardPrecio}>
+                        Precio: S/ {parseFloat(item.precio).toFixed(2)}
+                    </Text>
+                    {item.fecha_compra && (
+                        <Text style={styles.cardFecha}>
+                            {new Date(item.fecha_compra).toLocaleDateString()}
+                        </Text>
+                    )}
+                </View>
+            )}
+
+            {/* Modal del menú */}
+            <Modal
+                visible={menuVisibleId === item.id}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setMenuVisibleId(null)}
+            >
+                <TouchableOpacity
+                    style={styles.modalBackdrop}
+                    activeOpacity={1}
+                    onPress={() => setMenuVisibleId(null)}
+                >
+                    <View style={styles.menuContainer}>
+                        <TouchableOpacity
+                            style={styles.menuOption}
+                            onPress={() => abrirModalEditar(item)}
+                        >
+                            <Edit2 color="#3b82f6" size={20} />
+                            <Text style={[styles.menuText, { color: "#3b82f6" }]}>
+                                Editar
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.menuSeparator} />
+
+                        <TouchableOpacity
+                            style={styles.menuOption}
+                            onPress={() => handleEliminar(item)}
+                        >
+                            <Trash2 color="#dc2626" size={20} />
+                            <Text style={[styles.menuText, { color: "#dc2626" }]}>
+                                Eliminar
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+
+    const renderItem = ({ item }: { item: any }) => (
+        <View style={[styles.itemCard, item.comprado === 1 && styles.itemCardComprado]}>
+            <View style={styles.cardHeader}>
+                <View style={styles.iconContainer}>
+                    <ShoppingCart color={item.comprado ? "#10b981" : "#8b5cf6"} size={24} />
+                </View>
+                <View style={styles.cardInfo}>
+                    <Text style={[
+                        styles.cardNombre
+                    ]}>
+                        {item.nombreLista}
+                    </Text>
+                    <Text style={styles.cardCategoria}>{item.categoria}</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.checkButton}
+                    onPress={() => handleToggleLista(item)}
+                >
+                    <List color="#dc2626" size={24} />
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.menuButton}
@@ -326,9 +467,124 @@ export default function ShoppingScreen() {
             />
 
             {/* Botón flotante */}
-            <TouchableOpacity style={styles.fab} onPress={abrirModalNuevo}>
+            <TouchableOpacity style={styles.fab} onPress={abrirModalNuevaLista}>
                 <Plus color="white" size={28} />
             </TouchableOpacity>
+
+            {/* Modal Nueva Lista */}
+            <Modal visible={modalVisibleLista} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>
+                            {modoEdicion ? "Editar Lista de Compras" : "Nueva Lista de Compras"}
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Nombre de la Lista *</Text>
+                            <TextInput
+                                placeholder="Ej: Lista de alimentos."
+                                style={styles.input}
+                                value={nombreLista}
+                                onChangeText={setNombreLista}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Categoría *</Text>
+                            <Picker
+                                selectedValue={categoriaSeleccionada}
+                                onValueChange={(value) => setCategoriaSeleccionada(value)}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Selecciona una categoría" value="" />
+                                {categorias.map((cat) => (
+                                    <Picker.Item key={cat.id} label={`${cat.icono} ${cat.nombre}`} value={cat.nombre} />
+                                ))}
+                            </Picker>
+                        </View>
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setModalVisibleLista(false)}
+                            >
+                                <Text style={styles.btnText}>Cancelar</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.saveBtn} onPress={guardarLista}>
+                                <Text style={styles.btnText}>Guardar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+
+            {/* Modal Nuevo Elemento */}
+            <Modal visible={modalCompraListaVisible} transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>
+                            Elementos de la Lista
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Ítem de la Lista *</Text>
+                            <TextInput
+                                placeholder="Ej: Arroz, Azúcar."
+                                style={styles.input}
+                                value={itemNombre}
+                                onChangeText={setItemNombre}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Notas (opcional)</Text>
+                            <TextInput
+                                placeholder="Agregar detalles..."
+                                style={[styles.input, styles.textArea]}
+                                value={notas}
+                                onChangeText={setNotas}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        {/* Lista */}
+                        <FlatList
+                            data={itemsLista}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={renderItemElemento}
+                            contentContainerStyle={styles.listContainer}
+                            refreshControl={
+                                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#8b5cf6"]} />
+                            }
+                            ListEmptyComponent={
+                                <View style={styles.emptyState}>
+                                    <ShoppingCart color="#d1d5db" size={64} />
+                                    <Text style={styles.emptyTitle}>Lista vacía</Text>
+                                    <Text style={styles.emptyText}>
+                                        Presiona + para agregar tu primer item
+                                    </Text>
+                                </View>
+                            }
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setModalCompraListaVisible(false)}
+                            >
+                                <Text style={styles.btnText}>Cancelar</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.saveBtn} onPress={guardarItem}>
+                                <Text style={styles.btnText}>Guardar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Modal agregar/editar */}
             <Modal visible={modalVisible} animationType="slide" transparent>
@@ -650,7 +906,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     input: {
-        flex: 1,
+        /*flex: 1,
         padding: 14,
         fontSize: 16,
         color: "#1f2937",
@@ -658,6 +914,14 @@ const styles = StyleSheet.create({
         borderColor: "#e5e7eb",
         borderRadius: 12,
         backgroundColor: "#fff",
+        height:20*/
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 10,
+        backgroundColor: "#fff",
+        padding: 12,
+        marginBottom: 12,
+        fontSize: 16,
     },
     textArea: {
         height: 80,
@@ -713,27 +977,27 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-   menuContainer: {
-    width: 200,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 4,
-    elevation: 10,
-},
-menuOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 12,
-},
-menuText: {
-    fontSize: 15,
-    fontWeight: "600",
-},
-menuSeparator: {
-    height: 1,
-    backgroundColor: "#e5e7eb",
-    marginVertical: 2,
-},
+    menuContainer: {
+        width: 200,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        paddingVertical: 4,
+        elevation: 10,
+    },
+    menuOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        gap: 12,
+    },
+    menuText: {
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    menuSeparator: {
+        height: 1,
+        backgroundColor: "#e5e7eb",
+        marginVertical: 2,
+    },
 });

@@ -37,8 +37,15 @@ export function initDB() {
     -- ⭐ NUEVA TABLA: Lista de Compras
     CREATE TABLE IF NOT EXISTS ListaCompras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        item TEXT NOT NULL,
         categoria TEXT,
+        nombre TEXT,
+        fecha_creacion TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+
+    CREATE TABLE IF NOT EXISTS ItemsCompras (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item TEXT NOT NULL,
+        id_lista INTEGER,
         comprado INTEGER DEFAULT 0,
         precio REAL,
         fecha_creacion TEXT DEFAULT (datetime('now', 'localtime')),

@@ -5,7 +5,7 @@ import React from 'react';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DollarSign, Menu, Wallet } from 'lucide-react-native';
+import { DollarSign, Menu, Wallet, ShoppingCart } from 'lucide-react-native';
 
   export default function TabLayout() {
     const colorScheme = useColorScheme();
@@ -36,6 +36,13 @@ import { DollarSign, Menu, Wallet } from 'lucide-react-native';
           options={{
             title: 'Gastos',
             tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="shopping"
+          options={{
+            title: 'Lista Compras',
+            tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
           }}
         />
         <Tabs.Screen
