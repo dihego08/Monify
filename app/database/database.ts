@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-export const db = SQLite.openDatabaseSync("finanzas.db");
+export const db = SQLite.openDatabaseSync("finanzasv1.db");
 
 export function initDB() {
     db.execAsync(`

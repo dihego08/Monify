@@ -3,13 +3,13 @@ import { useFocusEffect } from "expo-router";
 import {
     Check,
     Edit2,
+    List,
     MoreVertical,
     Plus,
     ShoppingCart,
-    Trash2,
-    X, List
+    Trash2
 } from "lucide-react-native";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import {
     Alert,
     FlatList,
@@ -23,14 +23,16 @@ import {
 } from "react-native";
 import {
     agregarItemCompra,
+    agregarListaCompra,
     editarItemCompra,
+    editarListaCompra,
     eliminarItemCompra,
     getCategoriasCompras,
     getEstadisticasCompras,
+    getItemsCompras,
     getListaCompras,
     marcarComoComprado,
-    toggleComprado,
-    agregarListaCompra
+    toggleComprado
 } from "../services/comprasService";
 
 export default function ShoppingScreen() {
@@ -39,7 +41,7 @@ export default function ShoppingScreen() {
     const [modalVisibleLista, setModalVisibleLista] = useState(false);
     const [modalCompraListaVisible, setModalCompraListaVisible] = useState(false);
     const [categorias, setCategorias] = useState<any[]>([]);
-    const [items, setItems] = useState<any[]>([]);
+    const [listas, setListas] = useState<any[]>([]);
     const [itemsLista, setItemsLista] = useState<any[]>([]);
     const [estadisticas, setEstadisticas] = useState<any>({});
 
@@ -71,9 +73,10 @@ export default function ShoppingScreen() {
             const listaCategorias = await getCategoriasCompras();
             setCategorias(listaCategorias);
 
-            const listaItems = await getListaCompras();
-            console.log(listaItems);
-            setItems(listaItems);
+            const listaCompras = await getListaCompras();
+            console.log("Lista de compras:");
+            console.log(listaCompras);
+            setListas(listaCompras);
 
             const stats = await getEstadisticasCompras();
             setEstadisticas(stats);
@@ -109,16 +112,28 @@ export default function ShoppingScreen() {
         setModoEdicion(true);
         setItemSeleccionado(item);
         setItemNombre(item.item);
-        setCategoriaSeleccionada(item.categoria);
+        //setCategoriaSeleccionada(item.categoria);
         setNotas(item.notas || "");
         setMenuVisibleId(null);
-        setModalVisible(true);
+        //setModalVisible(true);
     };
-
+    const abrirModalEditarLista = (item: any) => {
+        setModoEdicion(true);
+        setItemSeleccionado(item);
+        setNombreLista(item.nombre);
+        setCategoriaSeleccionada(item.categoria);
+        setMenuVisibleId(null);
+        setModalVisibleLista(true);
+    };
+    const limpiarFormularioItem = () => {
+        setItemNombre("");
+        setNotas("");
+        setPrecio("");
+        setItemSeleccionado(null);
+        setModoEdicion(false);
+        setMenuVisibleId(null);
+    }
     const guardarItem = async () => {
-        console.log("OTRO HERE");
-        console.log(listaSeleccionada);
-
         if (!itemNombre.trim()) {
             Alert.alert("Error", "Completa el nombre del item.");
             return;
@@ -126,14 +141,18 @@ export default function ShoppingScreen() {
 
         try {
             if (modoEdicion && itemSeleccionado) {
-                await editarItemCompra(itemSeleccionado.id, itemNombre, itemSeleccionado.id, notas);
+                await editarItemCompra(itemSeleccionado.id, itemNombre, notas, listaSeleccionada.id);
                 Alert.alert("Éxito", "Item actualizado correctamente");
-            } else {
-                await agregarItemCompra(nombreLista, listaSeleccionada.id, notas);
-                Alert.alert("Éxito", "Item agregado a la lista");
-            }
 
-            setModalVisible(false);
+                const listaItems = await getItemsCompras(listaSeleccionada.id);
+                setItemsLista(listaItems);
+            } else {
+                await agregarItemCompra(itemNombre, listaSeleccionada.id, notas);
+                Alert.alert("Éxito", "Item agregado a la lista");
+                const listaItems = await getItemsCompras(listaSeleccionada.id);
+                setItemsLista(listaItems);
+            }
+            limpiarFormularioItem();
             await cargarDatos();
         } catch (error) {
             console.error('Error al guardar:', error);
@@ -148,19 +167,19 @@ export default function ShoppingScreen() {
         }
 
         try {
-            if (modoEdicion && itemSeleccionado) {
-                await editarItemCompra(itemSeleccionado.id, itemNombre, categoriaSeleccionada, notas);
-                Alert.alert("Éxito", "Item actualizado correctamente");
+            if (modoEdicion && listaSeleccionada) {
+                await editarListaCompra(listaSeleccionada.id, nombreLista, categoriaSeleccionada);
+                Alert.alert("Éxito", "Lista actualizada correctamente");
             } else {
-                await agregarListaCompra(itemNombre, categoriaSeleccionada, notas);
-                Alert.alert("Éxito", "Item agregado a la lista");
+                await agregarListaCompra(nombreLista, categoriaSeleccionada);
+                Alert.alert("Éxito", "Lista agregada");
             }
 
             setModalVisibleLista(false);
             await cargarDatos();
         } catch (error) {
             console.error('Error al guardar:', error);
-            Alert.alert("Error", "No se pudo guardar el item");
+            Alert.alert("Error", "No se pudo guardar la lista");
         }
     };
 
@@ -178,9 +197,10 @@ export default function ShoppingScreen() {
     };
 
     const handleToggleLista = async (item: any) => {
-        console.log("HERE");
-        console.log(item);
+        limpiarFormularioItem();
         setItemSeleccionado(item);
+        const listaItems = await getItemsCompras(item.id);
+        setItemsLista(listaItems);
         if (!item.comprado) {
             // Si va a marcar como comprado, preguntar por el precio
             setListaSeleccionada(item);
@@ -203,14 +223,40 @@ export default function ShoppingScreen() {
             await marcarComoComprado(itemSeleccionado.id, parseFloat(precio), true);
             Alert.alert("Éxito", "Compra registrada");
             setModalCompraVisible(false);
-            await cargarDatos();
+            //await cargarDatos();
+            const listaItems = await getItemsCompras(listaSeleccionada.id);
+            setItemsLista(listaItems);
         } catch (error) {
             console.error('Error:', error);
             Alert.alert("Error", "No se pudo registrar la compra");
         }
     };
 
-    const handleEliminar = (item: any) => {
+    const handleEliminarItem = (item: any) => {
+        setMenuVisibleId(null);
+        Alert.alert(
+            "Confirmar eliminación",
+            `¿Eliminar "${item.item}" de la lista?`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await eliminarItemCompra(item.id);
+                            Alert.alert("Éxito", "Item eliminado");
+                            const listaItems = await getItemsCompras(item.id);
+                            setItemsLista(listaItems);
+                        } catch (error) {
+                            Alert.alert("Error", "No se pudo eliminar el item");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+    const handleEliminarCompra = (item: any) => {
         setMenuVisibleId(null);
         Alert.alert(
             "Confirmar eliminación",
@@ -233,7 +279,6 @@ export default function ShoppingScreen() {
             ]
         );
     };
-
     const renderItemElemento = ({ item }: { item: any }) => (
         <View style={[styles.itemCard, item.comprado === 1 && styles.itemCardComprado]}>
             <View style={styles.cardHeader}>
@@ -247,7 +292,6 @@ export default function ShoppingScreen() {
                     ]}>
                         {item.item}
                     </Text>
-                    <Text style={styles.cardCategoria}>{item.categoria}</Text>
                     {item.notas && (
                         <Text style={styles.cardNotas} numberOfLines={2}>
                             {item.notas}
@@ -312,7 +356,7 @@ export default function ShoppingScreen() {
 
                         <TouchableOpacity
                             style={styles.menuOption}
-                            onPress={() => handleEliminar(item)}
+                            onPress={() => handleEliminarItem(item)}
                         >
                             <Trash2 color="#dc2626" size={20} />
                             <Text style={[styles.menuText, { color: "#dc2626" }]}>
@@ -335,7 +379,7 @@ export default function ShoppingScreen() {
                     <Text style={[
                         styles.cardNombre
                     ]}>
-                        {item.nombreLista}
+                        {item.nombre}
                     </Text>
                     <Text style={styles.cardCategoria}>{item.categoria}</Text>
                 </View>
@@ -381,7 +425,7 @@ export default function ShoppingScreen() {
                     <View style={styles.menuContainer}>
                         <TouchableOpacity
                             style={styles.menuOption}
-                            onPress={() => abrirModalEditar(item)}
+                            onPress={() => abrirModalEditarLista(item)}
                         >
                             <Edit2 color="#3b82f6" size={20} />
                             <Text style={[styles.menuText, { color: "#3b82f6" }]}>
@@ -393,7 +437,7 @@ export default function ShoppingScreen() {
 
                         <TouchableOpacity
                             style={styles.menuOption}
-                            onPress={() => handleEliminar(item)}
+                            onPress={() => handleEliminarCompra(item)}
                         >
                             <Trash2 color="#dc2626" size={20} />
                             <Text style={[styles.menuText, { color: "#dc2626" }]}>
@@ -448,7 +492,7 @@ export default function ShoppingScreen() {
 
             {/* Lista */}
             <FlatList
-                data={items}
+                data={listas}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContainer}

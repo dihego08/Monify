@@ -7,11 +7,16 @@ export async function getCategoriasCompras() {
   );
 }
 
-// Obtener todos los items de la lista
+// Obtener todas las listas
 export async function getListaCompras() {
   const query = "SELECT * FROM ListaCompras ORDER BY fecha_creacion DESC";
-
   return await db.getAllAsync(query);
+}
+
+// Obtener todos los items de la lista
+export async function getItemsCompras(id_lista: string) {
+  const query = "SELECT * FROM ItemsCompras WHERE id_lista = ? ORDER BY fecha_creacion DESC";
+  return await db.getAllAsync(query, [id_lista]);
 }
 
 // Agregar nuevo item a la lista
@@ -26,15 +31,26 @@ export async function agregarItemCompra(
   );
 }
 
-//agregarListaCompra
-export async function agregarListaCompra(
-  item: string,
-  categoria: string,
-  notas?: string
+
+// Editar Lista
+export async function editarListaCompra(
+  id: number,
+  nombre: string,
+  categoria: string
 ) {
   await db.runAsync(
-    "INSERT INTO ListaCompras (item, categoria, notas) VALUES (?, ?, ?)",
-    [item, categoria, notas || null]
+    "UPDATE ListaCompras SET nombre = ?, categoria = ? WHERE id = ?",
+    [nombre, categoria, id]
+  );
+}
+//agregarListaCompra
+export async function agregarListaCompra(
+  nombre: string,
+  categoria: string
+) {
+  await db.runAsync(
+    "INSERT INTO ListaCompras (nombre, categoria) VALUES (?, ?)",
+    [nombre, categoria]
   );
 }
 
@@ -47,7 +63,7 @@ export async function marcarComoComprado(
   const fechaCompra = comprado ? new Date().toISOString().split("T")[0] : null;
 
   await db.runAsync(
-    "UPDATE ListaCompras SET comprado = ?, precio = ?, fecha_compra = ? WHERE id = ?",
+    "UPDATE ItemsCompras SET comprado = ?, precio = ?, fecha_compra = ? WHERE id = ?",
     [comprado ? 1 : 0, precio, fechaCompra, id]
   );
 }
@@ -55,7 +71,7 @@ export async function marcarComoComprado(
 // Alternar estado de comprado (sin registrar precio)
 export async function toggleComprado(id: number) {
   await db.runAsync(
-    `UPDATE ListaCompras 
+    `UPDATE ItemsCompras 
          SET comprado = CASE WHEN comprado = 0 THEN 1 ELSE 0 END,
              fecha_compra = CASE WHEN comprado = 0 THEN datetime('now', 'localtime') ELSE NULL END
          WHERE id = ?`,
@@ -63,22 +79,23 @@ export async function toggleComprado(id: number) {
   );
 }
 
+
 // Editar item
 export async function editarItemCompra(
   id: number,
   item: string,
-  categoria: string,
-  notas?: string
+  notas: string,
+  id_lista: string,
 ) {
   await db.runAsync(
-    "UPDATE ListaCompras SET item = ?, categoria = ?, notas = ? WHERE id = ?",
-    [item, categoria, notas || null, id]
+    "UPDATE ItemsCompras SET item = ?, notas = ?, id_lista = ? WHERE id = ?",
+    [item, notas || null, id_lista, id]
   );
 }
 
 // Eliminar item
 export async function eliminarItemCompra(id: number) {
-  await db.runAsync("DELETE FROM ListaCompras WHERE id = ?", [id]);
+  await db.runAsync("DELETE FROM ItemsCompras WHERE id = ?", [id]);
 }
 
 // Obtener estadísticas
@@ -94,7 +111,7 @@ export async function getEstadisticasCompras() {
             SUM(CASE WHEN comprado = 1 THEN 1 ELSE 0 END) as comprados,
             SUM(CASE WHEN comprado = 0 THEN 1 ELSE 0 END) as pendientes,
             COALESCE(SUM(CASE WHEN comprado = 1 THEN precio ELSE 0 END), 0) as total_gastado
-        FROM ListaCompras`
+        FROM ItemsCompras`
   );
 
   return stats;
