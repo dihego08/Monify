@@ -10,7 +10,7 @@ import {
     Trash2,
     TrendingUp
 } from "lucide-react-native";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import {
     Alert,
     FlatList,
@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
 import {
+    actualizarIngresoMensual,
     eliminarConceptoPorMes,
     getConceptosIngreso,
     getIngresosPorMes,
@@ -43,6 +44,8 @@ export default function IngresosScreen() {
     const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
     const [refreshing, setRefreshing] = useState(false);
 
+    const [itemSeleccionado, setItemSeleccionado] = useState<any>(null);
+    const [modoEdicion, setModoEdicion] = useState(false);
     // ⭐ FIX: Estado para el menú individual
     const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
 
@@ -126,6 +129,16 @@ export default function IngresosScreen() {
         );
     };
 
+    const abrirModalEditar = (item: any) => {
+        setModoEdicion(true);
+        setItemSeleccionado(item);
+
+        setMonto(String(item.monto));
+        setConcepto_id(Number(item.id_concepto));
+        setFecha(new Date(item.fecha));
+
+        setModalVisible(true); // 👈 AL FINAL
+    };
     const guardarIngreso = async () => {
         if (!concepto_id || !monto) {
             Alert.alert("Error", "Completa todos los campos requeridos");
@@ -139,14 +152,19 @@ export default function IngresosScreen() {
 
         try {
             const fechaISO = formatearFechaISO(fecha);
-            await guardarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO);
-            Alert.alert("Éxito", "Ingreso registrado correctamente");
+
+            if (modoEdicion) {
+                await actualizarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO, itemSeleccionado.id);
+                Alert.alert("Éxito", "Ingreso actualizado correctamente");
+                setModoEdicion(false);
+                setItemSeleccionado(null);
+            } else {
+                await guardarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO);
+                Alert.alert("Éxito", "Ingreso registrado correctamente");
+            }
 
             setModalVisible(false);
-            setMonto("");
-            setConcepto_id(null);
-            setOtros("");
-            setFecha(new Date());
+
 
             await cargarDatos();
         } catch (error) {
@@ -155,6 +173,18 @@ export default function IngresosScreen() {
         }
     };
 
+    const limpiarFormulario = () => {
+        setMonto("");
+        setConcepto_id(null);
+        setOtros("");
+        setFecha(new Date());
+    }
+    const handleCancelar = () => {
+        limpiarFormulario();
+        setModalVisible(false);
+        setModoEdicion(false);
+        setItemSeleccionado(null);
+    }
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.ingresoCard}>
             <View style={styles.cardHeader}>
@@ -210,7 +240,8 @@ export default function IngresosScreen() {
                             style={styles.menuOption}
                             onPress={() => {
                                 setMenuVisibleId(null);
-                                Alert.alert("Editar", "Funcionalidad de edición próximamente");
+                                //Alert.alert("Editar", "Funcionalidad de edición próximamente");                                
+                                abrirModalEditar(item);
                             }}
                         >
                             <Edit2 color="#3b82f6" size={20} />
@@ -308,7 +339,7 @@ export default function IngresosScreen() {
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <TrendingUp color="#10b981" size={28} />
-                            <Text style={styles.modalTitle}>Nuevo Ingreso</Text>
+                            <Text style={styles.modalTitle}>{modoEdicion ? "Editar Ingreso" : "Nuevo Ingreso"}</Text>
                         </View>
 
                         <Picker
@@ -340,7 +371,7 @@ export default function IngresosScreen() {
                             <Text style={styles.inputLabel}>Descripción (opcional)</Text>
                             <TextInput
                                 placeholder="Agregar notas..."
-                                style={[styles.input, styles.textArea]}
+                                style={[styles.textArea]}
                                 value={otros}
                                 onChangeText={setOtros}
                                 multiline
@@ -376,13 +407,7 @@ export default function IngresosScreen() {
                         <View style={styles.modalButtons}>
                             <TouchableOpacity
                                 style={styles.cancelBtn}
-                                onPress={() => {
-                                    setModalVisible(false);
-                                    setMonto("");
-                                    setConcepto_id(null);
-                                    setOtros("");
-                                    setFecha(new Date());
-                                }}
+                                onPress={() => handleCancelar()}
                             >
                                 <Text style={styles.btnText}>Cancelar</Text>
                             </TouchableOpacity>

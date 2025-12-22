@@ -1,11 +1,11 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "expo-router";
-import { Calendar, MoreVertical, Plus, Search, Trash2, TrendingDown } from "lucide-react-native";
-import React, { useCallback, useState } from "react";
+import { Calendar, Edit2, MoreVertical, Plus, Search, Trash2, TrendingDown } from "lucide-react-native";
+import { useCallback, useState } from "react";
 import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
-import { actualizarEstadoGasto, eliminarGastoPorMes, getConceptosGasto, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
+import { actualizarEstadoGasto, actualizarGastoMensual, eliminarGastoPorMes, getConceptosGasto, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
 
 export default function RecordsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
@@ -13,6 +13,7 @@ export default function RecordsScreen() {
     const [gastos, setGastos] = useState<any[]>([]);
     const [conceptoSeleccionado, setConceptoSeleccionado] = useState<number | null>(null);
     const [monto, setMonto] = useState<string>("");
+    const [descripcion, setDescripcion] = useState<string>("");
     const [fechaLimite, setFechaLimite] = useState<Date>(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -20,6 +21,9 @@ export default function RecordsScreen() {
     const [mesFiltro, setMesFiltro] = useState(new Date().getMonth() + 1);
     const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
     const [refreshing, setRefreshing] = useState(false);
+
+    const [itemSeleccionado, setItemSeleccionado] = useState<any>(null);
+    const [modoEdicion, setModoEdicion] = useState(false);
 
     // ⭐ CAMBIO CLAVE: Guardar el ID del item cuyo menú está abierto
     const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
@@ -62,12 +66,19 @@ export default function RecordsScreen() {
         }
         const fechaISO = formatearFechaISO(fechaLimite);
         const mesFormateado = `${String(mes).padStart(2, '0')}-${anio}`;
-        await guardarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO);
-        Alert.alert("Éxito", "Gasto registrado correctamente");
+
+        if (modoEdicion) {
+            await actualizarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion, itemSeleccionado.id);
+            Alert.alert("Éxito", "Gasto actualizado correctamente");
+            setModoEdicion(false);
+            setItemSeleccionado(null);
+        } else {
+            await guardarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion);
+            Alert.alert("Éxito", "Gasto registrado correctamente");
+        }
+
         setModalVisible(false);
-        setMonto("");
-        setConceptoSeleccionado(null);
-        setFechaLimite(new Date());
+        limpiarFormulario();
         cargarDatos();
     };
 
@@ -112,6 +123,33 @@ export default function RecordsScreen() {
             ]
         );
     };
+    const abrirModalEditar = (item: any) => {
+        setModoEdicion(true);
+        setItemSeleccionado(item);
+
+        setMonto(String(item.monto));
+        setConceptoSeleccionado(Number(item.concepto_id));
+        setFechaLimite(new Date(item.fecha_limite));
+        setDescripcion(item.descripcion);
+
+        const [mesItem, anioItem] = item.mes.split("-");
+        setMes(Number(mesItem));
+        setAnio(Number(anioItem));
+
+        setModalVisible(true); // 👈 AL FINAL
+    };
+    const limpiarFormulario=()=>{
+        setMonto("");
+        setConceptoSeleccionado(null);
+        setFechaLimite(new Date());
+        setDescripcion("");
+    }
+    const handleCancelar = () => {
+        limpiarFormulario();
+        setModalVisible(false); 
+        setModoEdicion(false); 
+        setItemSeleccionado(null);
+    }
     const onRefresh = async () => {
         setRefreshing(true);
         await cargarDatos();
@@ -119,7 +157,6 @@ export default function RecordsScreen() {
     };
     const renderItem = ({ item }: { item: any }) => (
         <View style={[item.pagado == 1 ? styles.ingresoCardPagado : styles.ingresoCard]}>
-
             <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
                     <TrendingDown color="#dc3545" size={24} />
@@ -134,9 +171,9 @@ export default function RecordsScreen() {
                             Vence: {item.fecha_formato || item.fecha_limite}
                         </Text>
                     </View>
-                    {item.otros && (
+                    {item.descripcion && (
                         <Text style={styles.cardDescripcion} numberOfLines={2}>
-                            {item.otros}
+                            {item.descripcion}
                         </Text>
                     )}
                 </View>
@@ -185,6 +222,22 @@ export default function RecordsScreen() {
                     <View style={styles.menuContainer}>
                         <TouchableOpacity
                             style={styles.menuOption}
+                            onPress={() => {
+                                setMenuVisibleId(null);
+                                //Alert.alert("Editar", "Funcionalidad de edición próximamente");
+                                //setModalVisible(true);
+                                abrirModalEditar(item);
+                            }}
+                        >
+                            <Edit2 color="#3b82f6" size={20} />
+                            <Text style={[styles.menuText, { color: "#3b82f6" }]}>
+                                Editar
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.menuSeparator} />
+                        <TouchableOpacity
+                            style={styles.menuOption}
                             onPress={() => handleEliminar(item)}
                         >
                             <Trash2 color="#dc2626" size={20} />
@@ -231,16 +284,6 @@ export default function RecordsScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/*<FlatList
-                data={gastos}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderItem}
-                ListEmptyComponent={
-                    <Text style={styles.empty}>No hay gastos registrados para este mes</Text>
-                }
-            />*/}
-
-
             <FlatList
                 data={gastos}
                 keyExtractor={(item, index) => item.id?.toString() || index.toString()}
@@ -272,16 +315,18 @@ export default function RecordsScreen() {
             <Modal visible={modalVisible} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>Registrar Gasto</Text>
-
+                        <View style={styles.modalHeader}>
+                            <TrendingDown color="#dc3545" size={28} />
+                            <Text style={styles.modalTitle}>{modoEdicion ? "Editar Gasto" : "Registrar Gasto"}</Text>
+                        </View>
                         <Picker
                             selectedValue={conceptoSeleccionado}
                             onValueChange={(value) => setConceptoSeleccionado(value)}
-                            style={styles.input}
+                            style={styles.picker}
                         >
                             <Picker.Item label="Selecciona un concepto" value={null} />
                             {conceptos.map((c) => (
-                                <Picker.Item key={c.id} label={c.concepto} value={c.id} />
+                                <Picker.Item key={c.id} label={c.concepto} value={Number(c.id)} />
                             ))}
                         </Picker>
 
@@ -292,13 +337,31 @@ export default function RecordsScreen() {
                             onAnioChange={setAnio}
                         />
 
-                        <TextInput
-                            placeholder="Monto"
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={monto}
-                            onChangeText={setMonto}
-                        />
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Monto *</Text>
+                            <View style={styles.montoInput}>
+                                <Text style={styles.montoSymbol}>S/</Text>
+                                <TextInput
+                                    placeholder="0.00"
+                                    style={styles.input}
+                                    keyboardType="decimal-pad"
+                                    value={monto}
+                                    onChangeText={setMonto}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Descripción (opcional)</Text>
+                            <TextInput
+                                placeholder="Agregar notas..."
+                                style={[styles.textArea]}
+                                value={descripcion}
+                                onChangeText={setDescripcion}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
 
                         <TouchableOpacity
                             onPress={() => setShowDatePicker(true)}
@@ -324,7 +387,7 @@ export default function RecordsScreen() {
                         <View style={styles.modalButtons}>
                             <TouchableOpacity
                                 style={styles.cancelBtn}
-                                onPress={() => setModalVisible(false)}
+                                onPress={() => handleCancelar()}
                             >
                                 <Text style={styles.btnText}>Cancelar</Text>
                             </TouchableOpacity>
@@ -387,28 +450,26 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        justifyContent: "center",
+        justifyContent: "flex-end",
         backgroundColor: "rgba(0,0,0,0.5)",
     },
     modalContainer: {
         backgroundColor: "#fff",
-        marginHorizontal: 20,
-        borderRadius: 16,
-        padding: 20,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        maxHeight: "90%",
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: "bold",
-        marginBottom: 16,
-        textAlign: "center"
+        color: "#1f2937",
     },
     input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 12,
+        flex: 1,
+        padding: 14,
         fontSize: 16,
+        color: "#1f2937",
     },
     dateButton: {
         borderWidth: 1,
@@ -600,7 +661,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         borderLeftWidth: 4,
         borderLeftColor: "#10b981",
-        
+
         backgroundColor: "#f0fdf4",
     },
     emptyState: {
@@ -675,5 +736,54 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "bold",
         color: "#dc3545",
+    },
+    menuSeparator: {
+        height: 1,
+        backgroundColor: "#f3f4f6",
+        marginVertical: 4,
+    },
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 24,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    }, inputLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#374151",
+        marginBottom: 8,
+    },
+    montoInput: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        backgroundColor: "#fff",
+    },
+    montoSymbol: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#10b981",
+        marginRight: 8,
+    },
+    textArea: {
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 12,
+        //padding: 14,
+        height: 100,
+        textAlignVertical: "top",
+    },
+    picker: {
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 12,
+        marginBottom: 16,
+        backgroundColor: "#f9fafb",
     },
 });

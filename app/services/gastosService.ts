@@ -52,28 +52,26 @@ export async function guardarGastoMensual(
   mes: string,
   monto: number,
   fecha_limite: string,
+  descripcion: string,
 ) {
-  // Primero verificamos si ya existe un gasto registrado para ese concepto en ese mes
-  const existente = await db.getFirstAsync(
-    "SELECT id FROM GastosMensuales WHERE concepto_id = ? AND mes = ?",
-    [concepto_id, mes]
-  );
-
-  if (existente) {
-    // Si existe, actualizamos el monto
     await db.runAsync(
-      "UPDATE GastosMensuales SET monto = ?, fecha_limite = ? WHERE id = ?",
-      [monto, fecha_limite, existente.id]
+      "INSERT INTO GastosMensuales (concepto_id, mes, monto, fecha_limite, descripcion) VALUES (?, ?, ?, ?, ?)",
+      [concepto_id, mes, monto, fecha_limite, descripcion]
     );
-  } else {
-    // Si no existe, insertamos un nuevo registro
-    await db.runAsync(
-      "INSERT INTO GastosMensuales (concepto_id, mes, monto, fecha_limite) VALUES (?, ?, ?, ?)",
-      [concepto_id, mes, monto, fecha_limite]
-    );
-  }
 }
-
+export async function actualizarGastoMensual(
+  concepto_id: number,
+  mes: string,
+  monto: number,
+  fecha_limite: string,
+  descripcion: string,
+  id:number
+){
+  await db.runAsync(
+    "UPDATE GastosMensuales SET concepto_id = ?, mes = ?, monto = ?, fecha_limite = ?, descripcion = ? WHERE id = ?",
+    [concepto_id, mes, monto, fecha_limite, descripcion, id]
+  );
+}
 // Obtener el total de gastos de un mes
 export async function getTotalGastosPorMes(mes: string) {
   const total = await db.getFirstAsync(

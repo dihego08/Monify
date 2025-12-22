@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-export const db = SQLite.openDatabaseSync("finanzasv1.db");
+export const db = SQLite.openDatabaseSync("db_finanzas.db");
 
 export function initDB() {
     db.execAsync(`
@@ -31,6 +31,7 @@ export function initDB() {
         fecha_registro TEXT,
         pagado INTEGER DEFAULT 0,
         fecha_limite TEXT,
+        descripcion TEXT,
         FOREIGN KEY(concepto_id) REFERENCES GastosConceptos(id)
       );
 
