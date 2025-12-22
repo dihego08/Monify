@@ -21,6 +21,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { initDB } from "../database/database";
 import {
     agregarItemCompra,
     agregarListaCompra,
@@ -64,6 +65,7 @@ export default function ShoppingScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            initDB();
             cargarDatos();
         }, [soloNoComprados])
     );
@@ -283,7 +285,7 @@ export default function ShoppingScreen() {
         <View style={[styles.itemCard, item.comprado === 1 && styles.itemCardComprado]}>
             <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
-                    <ShoppingCart color={item.comprado ? "#10b981" : "#8b5cf6"} size={24} />
+                    <ShoppingCart color={item.comprado ? "#10b981" : "#459c4f"} size={24} />
                 </View>
                 <View style={styles.cardInfo}>
                     <Text style={[
@@ -373,7 +375,7 @@ export default function ShoppingScreen() {
         <View style={[styles.itemCard, item.comprado === 1 && styles.itemCardComprado]}>
             <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
-                    <ShoppingCart color={item.comprado ? "#10b981" : "#8b5cf6"} size={24} />
+                    <ShoppingCart color={item.comprado ? "#10b981" : "#459c4f"} size={24} />
                 </View>
                 <View style={styles.cardInfo}>
                     <Text style={[
@@ -497,7 +499,7 @@ export default function ShoppingScreen() {
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContainer}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#8b5cf6"]} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#459c4f"]} />
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
@@ -601,7 +603,7 @@ export default function ShoppingScreen() {
                             renderItem={renderItemElemento}
                             contentContainerStyle={styles.listContainer}
                             refreshControl={
-                                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#8b5cf6"]} />
+                                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#459c4f"]} />
                             }
                             ListEmptyComponent={
                                 <View style={styles.emptyState}>
@@ -738,7 +740,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#f9fafb",
     },
     header: {
-        backgroundColor: "#8b5cf6",
+        backgroundColor: "#459c4f",
         paddingTop: 60,
         paddingBottom: 24,
         paddingHorizontal: 20,
@@ -784,8 +786,8 @@ const styles = StyleSheet.create({
         borderColor: "#e5e7eb",
     },
     filterButtonActive: {
-        backgroundColor: "#8b5cf6",
-        borderColor: "#8b5cf6",
+        backgroundColor: "#459c4f",
+        borderColor: "#459c4f",
     },
     filterText: {
         fontSize: 14,
@@ -809,7 +811,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3,
         borderLeftWidth: 4,
-        borderLeftColor: "#8b5cf6",
+        borderLeftColor: "#459c4f",
     },
     itemCardComprado: {
         backgroundColor: "#f0fdf4",
@@ -887,14 +889,14 @@ const styles = StyleSheet.create({
         position: "absolute",
         bottom: 24,
         right: 24,
-        backgroundColor: "#8b5cf6",
+        backgroundColor: "#459c4f",
         borderRadius: 28,
         width: 56,
         height: 56,
         justifyContent: "center",
         alignItems: "center",
         elevation: 8,
-        shadowColor: "#8b5cf6",
+        shadowColor: "#459c4f",
         shadowOpacity: 0.4,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
@@ -989,7 +991,7 @@ const styles = StyleSheet.create({
     montoSymbol: {
         fontSize: 18,
         fontWeight: "600",
-        color: "#8b5cf6",
+        color: "#459c4f",
         marginRight: 8,
     },
     modalButtons: {
@@ -1005,7 +1007,7 @@ const styles = StyleSheet.create({
     },
     saveBtn: {
         flex: 1,
-        backgroundColor: "#8b5cf6",
+        backgroundColor: "#459c4f",
         padding: 16,
         borderRadius: 12,
     },
