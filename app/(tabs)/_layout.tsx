@@ -16,7 +16,7 @@ import { ShoppingCart } from 'lucide-react-native';
           tabBarButton: HapticTab,
         }}>
         <Tabs.Screen
-          name="shopping"
+          name="index"
           options={{
             title: 'Lista Compras',
             tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
