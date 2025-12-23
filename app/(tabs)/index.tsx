@@ -12,14 +12,17 @@ import {
 import { useCallback, useState } from "react";
 import {
     Alert,
-    FlatList,
-    Modal,
+    FlatList, // ← Agregar
+    KeyboardAvoidingView,
+    Modal, // ← Agregar
+    Platform,
     RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { initDB } from "../database/database";
 import {
@@ -28,6 +31,7 @@ import {
     editarItemCompra,
     editarListaCompra,
     eliminarItemCompra,
+    eliminarListaCompra,
     getCategoriasCompras,
     getEstadisticasCompras,
     getItemsCompras,
@@ -76,8 +80,6 @@ export default function ShoppingScreen() {
             setCategorias(listaCategorias);
 
             const listaCompras = await getListaCompras();
-            console.log("Lista de compras:");
-            console.log(listaCompras);
             setListas(listaCompras);
 
             const stats = await getEstadisticasCompras();
@@ -94,19 +96,11 @@ export default function ShoppingScreen() {
         setRefreshing(false);
     };
 
-    const abrirModalNuevo = () => {
-        setModoEdicion(false);
-        setItemNombre("");
-        setCategoriaSeleccionada("");
-        setNotas("");
-        setModalVisible(true);
-    };
-
     const abrirModalNuevaLista = () => {
-        //setModoEdicion(false);
-        //setItemNombre("");
         setCategoriaSeleccionada("");
-        //setNotas("");
+        setNombreLista("");
+        setModoEdicion(false);
+        setListaSeleccionada(null);
         setModalVisibleLista(true);
     };
 
@@ -114,14 +108,12 @@ export default function ShoppingScreen() {
         setModoEdicion(true);
         setItemSeleccionado(item);
         setItemNombre(item.item);
-        //setCategoriaSeleccionada(item.categoria);
         setNotas(item.notas || "");
         setMenuVisibleId(null);
-        //setModalVisible(true);
     };
     const abrirModalEditarLista = (item: any) => {
         setModoEdicion(true);
-        setItemSeleccionado(item);
+        setListaSeleccionada(item);
         setNombreLista(item.nombre);
         setCategoriaSeleccionada(item.categoria);
         setMenuVisibleId(null);
@@ -172,11 +164,14 @@ export default function ShoppingScreen() {
             if (modoEdicion && listaSeleccionada) {
                 await editarListaCompra(listaSeleccionada.id, nombreLista, categoriaSeleccionada);
                 Alert.alert("Éxito", "Lista actualizada correctamente");
+                setModoEdicion(false);
+                setListaSeleccionada(null);
+                setCategoriaSeleccionada('');
             } else {
                 await agregarListaCompra(nombreLista, categoriaSeleccionada);
                 Alert.alert("Éxito", "Lista agregada");
             }
-
+            setNombreLista("");
             setModalVisibleLista(false);
             await cargarDatos();
         } catch (error) {
@@ -187,12 +182,10 @@ export default function ShoppingScreen() {
 
     const handleToggleComprado = async (item: any) => {
         if (!item.comprado) {
-            // Si va a marcar como comprado, preguntar por el precio
             setItemSeleccionado(item);
             setPrecio("");
             setModalCompraVisible(true);
         } else {
-            // Si va a desmarcar, simplemente toggle
             await toggleComprado(item.id);
             await cargarDatos();
         }
@@ -204,12 +197,9 @@ export default function ShoppingScreen() {
         const listaItems = await getItemsCompras(item.id);
         setItemsLista(listaItems);
         if (!item.comprado) {
-            // Si va a marcar como comprado, preguntar por el precio
             setListaSeleccionada(item);
-            //setPrecio("");
             setModalCompraListaVisible(true);
         } else {
-            // Si va a desmarcar, simplemente toggle
             await toggleComprado(item.id);
             await cargarDatos();
         }
@@ -225,7 +215,6 @@ export default function ShoppingScreen() {
             await marcarComoComprado(itemSeleccionado.id, parseFloat(precio), true);
             Alert.alert("Éxito", "Compra registrada");
             setModalCompraVisible(false);
-            //await cargarDatos();
             const listaItems = await getItemsCompras(listaSeleccionada.id);
             setItemsLista(listaItems);
         } catch (error) {
@@ -262,7 +251,7 @@ export default function ShoppingScreen() {
         setMenuVisibleId(null);
         Alert.alert(
             "Confirmar eliminación",
-            `¿Eliminar "${item.item}" de la lista?`,
+            `¿Eliminar "${item.nombre}" de la lista?`,
             [
                 { text: "Cancelar", style: "cancel" },
                 {
@@ -270,7 +259,7 @@ export default function ShoppingScreen() {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await eliminarItemCompra(item.id);
+                            await eliminarListaCompra(item.id);
                             Alert.alert("Éxito", "Item eliminado");
                             await cargarDatos();
                         } catch (error) {
@@ -519,52 +508,69 @@ export default function ShoppingScreen() {
 
             {/* Modal Nueva Lista */}
             <Modal visible={modalVisibleLista} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>
-                            {modoEdicion ? "Editar Lista de Compras" : "Nueva Lista de Compras"}
-                        </Text>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Nombre de la Lista *</Text>
-                            <TextInput
-                                placeholder="Ej: Lista de alimentos."
-                                style={styles.input}
-                                value={nombreLista}
-                                onChangeText={setNombreLista}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Categoría *</Text>
-                            <Picker
-                                selectedValue={categoriaSeleccionada}
-                                onValueChange={(value) => setCategoriaSeleccionada(value)}
-                                style={styles.picker}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.modalOverlay}
+                        onPress={() => setModalVisibleLista(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={styles.modalContainer}
+                            onPress={(e) => e.stopPropagation()}
+                        >
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
                             >
-                                <Picker.Item label="Selecciona una categoría" value="" />
-                                {categorias.map((cat) => (
-                                    <Picker.Item key={cat.id} label={`${cat.icono} ${cat.nombre}`} value={cat.nombre} />
-                                ))}
-                            </Picker>
-                        </View>
+                                <Text style={styles.modalTitle}>
+                                    {modoEdicion ? "Editar Lista de Compras" : "Nueva Lista de Compras"}
+                                </Text>
 
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelBtn}
-                                onPress={() => setModalVisibleLista(false)}
-                            >
-                                <Text style={styles.btnText}>Cancelar</Text>
-                            </TouchableOpacity>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Nombre de la Lista *</Text>
+                                    <TextInput
+                                        placeholder="Ej: Lista de alimentos."
+                                        style={styles.input}
+                                        value={nombreLista}
+                                        onChangeText={setNombreLista}
+                                    />
+                                </View>
 
-                            <TouchableOpacity style={styles.saveBtn} onPress={guardarLista}>
-                                <Text style={styles.btnText}>Guardar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Categoría *</Text>
+                                    <Picker
+                                        selectedValue={categoriaSeleccionada}
+                                        onValueChange={(value) => setCategoriaSeleccionada(value)}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Selecciona una categoría" value="" />
+                                        {categorias.map((cat) => (
+                                            <Picker.Item key={cat.id} label={`${cat.icono} ${cat.nombre}`} value={cat.nombre} />
+                                        ))}
+                                    </Picker>
+                                </View>
+
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelBtn}
+                                        onPress={() => setModalVisibleLista(false)}
+                                    >
+                                        <Text style={styles.btnText}>Cancelar</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={styles.saveBtn} onPress={guardarLista}>
+                                        <Text style={styles.btnText}>Guardar</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
-
 
             {/* Modal Nuevo Elemento */}
             <Modal visible={modalCompraListaVisible} transparent>
@@ -620,66 +626,6 @@ export default function ShoppingScreen() {
                             <TouchableOpacity
                                 style={styles.cancelBtn}
                                 onPress={() => setModalCompraListaVisible(false)}
-                            >
-                                <Text style={styles.btnText}>Cancelar</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.saveBtn} onPress={guardarItem}>
-                                <Text style={styles.btnText}>Guardar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Modal agregar/editar */}
-            <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>
-                            {modoEdicion ? "Editar Item" : "Nuevo Item"}
-                        </Text>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Nombre del item *</Text>
-                            <TextInput
-                                placeholder="Ej: Leche, Pan, etc."
-                                style={styles.input}
-                                value={itemNombre}
-                                onChangeText={setItemNombre}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Categoría *</Text>
-                            <Picker
-                                selectedValue={categoriaSeleccionada}
-                                onValueChange={(value) => setCategoriaSeleccionada(value)}
-                                style={styles.picker}
-                            >
-                                <Picker.Item label="Selecciona una categoría" value="" />
-                                {categorias.map((cat) => (
-                                    <Picker.Item key={cat.id} label={`${cat.icono} ${cat.nombre}`} value={cat.nombre} />
-                                ))}
-                            </Picker>
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Notas (opcional)</Text>
-                            <TextInput
-                                placeholder="Agregar detalles..."
-                                style={[styles.input, styles.textArea]}
-                                value={notas}
-                                onChangeText={setNotas}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelBtn}
-                                onPress={() => setModalVisible(false)}
                             >
                                 <Text style={styles.btnText}>Cancelar</Text>
                             </TouchableOpacity>
@@ -952,15 +898,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     input: {
-        /*flex: 1,
-        padding: 14,
-        fontSize: 16,
-        color: "#1f2937",
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        height:20*/
         borderWidth: 1,
         borderColor: "#e5e7eb",
         borderRadius: 10,
@@ -1001,7 +938,7 @@ const styles = StyleSheet.create({
     },
     cancelBtn: {
         flex: 1,
-        backgroundColor: "#f3f4f6",
+        backgroundColor: "#dc3545",
         padding: 16,
         borderRadius: 12,
     },

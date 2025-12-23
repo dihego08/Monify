@@ -43,6 +43,14 @@ export async function editarListaCompra(
     [nombre, categoria, id]
   );
 }
+export async function eliminarListaCompra(
+  id: number
+) {
+  await db.runAsync(
+    "DELETE FROM ListaCompras WHERE id = ?",
+    [id]
+  );
+}
 //agregarListaCompra
 export async function agregarListaCompra(
   nombre: string,
