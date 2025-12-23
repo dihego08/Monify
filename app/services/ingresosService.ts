@@ -2,7 +2,7 @@ import { db } from "../database/database";
 
 // Guardar o actualizar concepto de ingreso
 export async function guardarConceptoIngreso(concepto: string) {
-  // Primero verificamos si ya existe un concepto de ingreso registrado para ese concepto
+  /*// Primero verificamos si ya existe un concepto de ingreso registrado para ese concepto
   const existente = await db.getFirstAsync(
     "SELECT id FROM IngresosConceptos WHERE concepto = ?",
     [concepto]
@@ -15,11 +15,21 @@ export async function guardarConceptoIngreso(concepto: string) {
       [concepto, existente.id]
     );
   } else {
-    // Si no existe, insertamos un nuevo registro
-    await db.runAsync("INSERT INTO IngresosConceptos (concepto) VALUES (?)", [
-      concepto,
-    ]);
-  }
+    // Si no existe, insertamos un nuevo registro*/
+  await db.runAsync("INSERT INTO IngresosConceptos (concepto) VALUES (?)", [
+    concepto,
+  ]);
+  //}
+}
+
+export async function editarConceptoIngreso(concepto: string, id: number) {
+  await db.runAsync("UPDATE IngresosConceptos SET concepto = ? WHERE id = ?", [
+    concepto,
+    id,
+  ]);
+}
+export async function eliminarConceptoIngreso(id: number) {
+  await db.runAsync("DELETE FROM IngresosConceptos WHERE id = ?", [id]);
 }
 // Obtener todos los conceptos de ingreso activos
 export async function getConceptosIngreso() {
