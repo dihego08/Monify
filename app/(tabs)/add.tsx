@@ -14,13 +14,16 @@ import { useCallback, useState } from "react";
 import {
     Alert,
     FlatList,
-    Modal,
-    RefreshControl,
+    KeyboardAvoidingView,
+    Modal, // ← Agregar
+    Platform,
+    RefreshControl, // ← Agregar
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
 import {
@@ -335,92 +338,111 @@ export default function IngresosScreen() {
 
             {/* Modal de registro */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <TrendingUp color="#10b981" size={28} />
-                            <Text style={styles.modalTitle}>{modoEdicion ? "Editar Ingreso" : "Nuevo Ingreso"}</Text>
-                        </View>
-
-                        <Picker
-                            selectedValue={concepto_id}
-                            onValueChange={(value) => setConcepto_id(value)}
-                            style={styles.picker}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.modalOverlay}
+                        onPress={() => setModalVisible(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={styles.modalContainer}
+                            onPress={(e) => e.stopPropagation()}
                         >
-                            <Picker.Item label="Selecciona un concepto" value={null} />
-                            {conceptos.map((c) => (
-                                <Picker.Item key={c.id} label={c.concepto} value={c.id} />
-                            ))}
-                        </Picker>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Monto *</Text>
-                            <View style={styles.montoInput}>
-                                <Text style={styles.montoSymbol}>S/</Text>
-                                <TextInput
-                                    placeholder="0.00"
-                                    style={styles.input}
-                                    keyboardType="decimal-pad"
-                                    value={monto}
-                                    onChangeText={setMonto}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Descripción (opcional)</Text>
-                            <TextInput
-                                placeholder="Agregar notas..."
-                                style={[styles.textArea]}
-                                value={otros}
-                                onChangeText={setOtros}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Fecha</Text>
-                            <TouchableOpacity
-                                onPress={() => setShowDatePicker(true)}
-                                style={styles.dateButton}
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
                             >
-                                <Calendar color="#6b7280" size={20} />
-                                <Text style={styles.dateLabel}>
-                                    {formatearFechaLegible(fecha)}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                                <View style={styles.modalHeader}>
+                                    <TrendingUp color="#10b981" size={28} />
+                                    <Text style={styles.modalTitle}>{modoEdicion ? "Editar Ingreso" : "Nuevo Ingreso"}</Text>
+                                </View>
 
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={fecha}
-                                mode="date"
-                                display="default"
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(false);
-                                    if (selectedDate) setFecha(selectedDate);
-                                }}
-                            />
-                        )}
+                                <Picker
+                                    selectedValue={concepto_id}
+                                    onValueChange={(value) => setConcepto_id(value)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Selecciona un concepto" value={null} />
+                                    {conceptos.map((c) => (
+                                        <Picker.Item key={c.id} label={c.concepto} value={c.id} />
+                                    ))}
+                                </Picker>
 
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelBtn}
-                                onPress={() => handleCancelar()}
-                            >
-                                <Text style={styles.btnText}>Cancelar</Text>
-                            </TouchableOpacity>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Monto *</Text>
+                                    <View style={styles.montoInput}>
+                                        <Text style={styles.montoSymbol}>S/</Text>
+                                        <TextInput
+                                            placeholder="0.00"
+                                            style={styles.input}
+                                            keyboardType="decimal-pad"
+                                            value={monto}
+                                            onChangeText={setMonto}
+                                        />
+                                    </View>
+                                </View>
 
-                            <TouchableOpacity
-                                style={styles.saveBtn}
-                                onPress={guardarIngreso}
-                            >
-                                <Text style={styles.btnText}>Guardar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Descripción (opcional)</Text>
+                                    <TextInput
+                                        placeholder="Agregar notas..."
+                                        style={[styles.textArea]}
+                                        value={otros}
+                                        onChangeText={setOtros}
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Fecha</Text>
+                                    <TouchableOpacity
+                                        onPress={() => setShowDatePicker(true)}
+                                        style={styles.dateButton}
+                                    >
+                                        <Calendar color="#6b7280" size={20} />
+                                        <Text style={styles.dateLabel}>
+                                            {formatearFechaLegible(fecha)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={fecha}
+                                        mode="date"
+                                        display="default"
+                                        onChange={(event, selectedDate) => {
+                                            setShowDatePicker(false);
+                                            if (selectedDate) setFecha(selectedDate);
+                                        }}
+                                    />
+                                )}
+
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelBtn}
+                                        onPress={() => handleCancelar()}
+                                    >
+                                        <Text style={styles.btnText}>Cancelar</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.saveBtn}
+                                        onPress={guardarIngreso}
+                                    >
+                                        <Text style={styles.btnText}>Guardar</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );
@@ -683,9 +705,9 @@ const styles = StyleSheet.create({
     },
     cancelBtn: {
         flex: 1,
-        backgroundColor: "#f3f4f6",
-        padding: 16,
-        borderRadius: 12,
+        backgroundColor: "#6b7280",
+        padding: 12,
+        borderRadius: 10,
     },
     saveBtn: {
         flex: 1,

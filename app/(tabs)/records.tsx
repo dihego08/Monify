@@ -3,7 +3,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "expo-router";
 import { Calendar, Edit2, MoreVertical, Plus, Search, Trash2, TrendingDown } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
 import { actualizarEstadoGasto, actualizarGastoMensual, eliminarGastoPorMes, getConceptosGasto, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
 
@@ -138,7 +138,7 @@ export default function RecordsScreen() {
 
         setModalVisible(true); // 👈 AL FINAL
     };
-    const limpiarFormulario=()=>{
+    const limpiarFormulario = () => {
         setMonto("");
         setConceptoSeleccionado(null);
         setFechaLimite(new Date());
@@ -146,8 +146,8 @@ export default function RecordsScreen() {
     }
     const handleCancelar = () => {
         limpiarFormulario();
-        setModalVisible(false); 
-        setModoEdicion(false); 
+        setModalVisible(false);
+        setModoEdicion(false);
         setItemSeleccionado(null);
     }
     const onRefresh = async () => {
@@ -313,91 +313,110 @@ export default function RecordsScreen() {
 
             {/* Modal de registro */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <TrendingDown color="#dc3545" size={28} />
-                            <Text style={styles.modalTitle}>{modoEdicion ? "Editar Gasto" : "Registrar Gasto"}</Text>
-                        </View>
-                        <Picker
-                            selectedValue={conceptoSeleccionado}
-                            onValueChange={(value) => setConceptoSeleccionado(value)}
-                            style={styles.picker}
-                        >
-                            <Picker.Item label="Selecciona un concepto" value={null} />
-                            {conceptos.map((c) => (
-                                <Picker.Item key={c.id} label={c.concepto} value={Number(c.id)} />
-                            ))}
-                        </Picker>
-
-                        <SelectMesAnio
-                            mes={mes}
-                            anio={anio}
-                            onMesChange={setMes}
-                            onAnioChange={setAnio}
-                        />
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Monto *</Text>
-                            <View style={styles.montoInput}>
-                                <Text style={styles.montoSymbol}>S/</Text>
-                                <TextInput
-                                    placeholder="0.00"
-                                    style={styles.input}
-                                    keyboardType="decimal-pad"
-                                    value={monto}
-                                    onChangeText={setMonto}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Descripción (opcional)</Text>
-                            <TextInput
-                                placeholder="Agregar notas..."
-                                style={[styles.textArea]}
-                                value={descripcion}
-                                onChangeText={setDescripcion}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.modalOverlay}
+                        onPress={() => setModalVisible(false)}
+                    >
                         <TouchableOpacity
-                            onPress={() => setShowDatePicker(true)}
-                            style={styles.dateButton}
+                            activeOpacity={1}
+                            style={styles.modalContainer}
+                            onPress={(e) => e.stopPropagation()}
                         >
-                            <Text style={styles.dateLabel}>
-                                📅 Fecha límite: {formatearFechaLegible(fechaLimite)}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={fechaLimite}
-                                mode="date"
-                                display="default"
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(false);
-                                    if (selectedDate) setFechaLimite(selectedDate);
-                                }}
-                            />
-                        )}
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelBtn}
-                                onPress={() => handleCancelar()}
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
                             >
-                                <Text style={styles.btnText}>Cancelar</Text>
-                            </TouchableOpacity>
+                                <View style={styles.modalHeader}>
+                                    <TrendingDown color="#dc3545" size={28} />
+                                    <Text style={styles.modalTitle}>{modoEdicion ? "Editar Gasto" : "Registrar Gasto"}</Text>
+                                </View>
+                                <Picker
+                                    selectedValue={conceptoSeleccionado}
+                                    onValueChange={(value) => setConceptoSeleccionado(value)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Selecciona un concepto" value={null} />
+                                    {conceptos.map((c) => (
+                                        <Picker.Item key={c.id} label={c.concepto} value={Number(c.id)} />
+                                    ))}
+                                </Picker>
 
-                            <TouchableOpacity style={styles.saveBtn} onPress={guardarGasto}>
-                                <Text style={styles.btnText}>Guardar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                                <SelectMesAnio
+                                    mes={mes}
+                                    anio={anio}
+                                    onMesChange={setMes}
+                                    onAnioChange={setAnio}
+                                />
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Monto *</Text>
+                                    <View style={styles.montoInput}>
+                                        <Text style={styles.montoSymbol}>S/</Text>
+                                        <TextInput
+                                            placeholder="0.00"
+                                            style={styles.input}
+                                            keyboardType="decimal-pad"
+                                            value={monto}
+                                            onChangeText={setMonto}
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Descripción (opcional)</Text>
+                                    <TextInput
+                                        placeholder="Agregar notas..."
+                                        style={[styles.textArea]}
+                                        value={descripcion}
+                                        onChangeText={setDescripcion}
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </View>
+
+                                <TouchableOpacity
+                                    onPress={() => setShowDatePicker(true)}
+                                    style={styles.dateButton}
+                                >
+                                    <Text style={styles.dateLabel}>
+                                        📅 Fecha límite: {formatearFechaLegible(fechaLimite)}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={fechaLimite}
+                                        mode="date"
+                                        display="default"
+                                        onChange={(event, selectedDate) => {
+                                            setShowDatePicker(false);
+                                            if (selectedDate) setFechaLimite(selectedDate);
+                                        }}
+                                    />
+                                )}
+
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelBtn}
+                                        onPress={() => handleCancelar()}
+                                    >
+                                        <Text style={styles.btnText}>Cancelar</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={styles.saveBtn} onPress={guardarGasto}>
+                                        <Text style={styles.btnText}>Guardar</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );
@@ -768,7 +787,7 @@ const styles = StyleSheet.create({
     montoSymbol: {
         fontSize: 18,
         fontWeight: "600",
-        color: "#10b981",
+        color: "#dc3545",
         marginRight: 8,
     },
     textArea: {
