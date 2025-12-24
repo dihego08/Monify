@@ -1,10 +1,9 @@
 import { db } from "../database/database";
+import { getCategoriasComprasActivas } from "./categoriasComprasService";
 
 // Obtener todas las categorías activas
 export async function getCategoriasCompras() {
-  return await db.getAllAsync(
-    "SELECT * FROM CategoriasCompras WHERE activo = 1 ORDER BY nombre ASC"
-  );
+  return await getCategoriasComprasActivas();
 }
 
 // Obtener todas las listas

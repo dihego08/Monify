@@ -1,11 +1,12 @@
 import { Picker } from "@react-native-picker/picker";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
     Check,
     Edit2,
     List,
     MoreVertical,
     Plus,
+    Settings,
     ShoppingCart,
     Trash2
 } from "lucide-react-native";
@@ -445,7 +446,15 @@ export default function ShoppingScreen() {
         <View style={styles.container}>
             {/* Header con estadísticas */}
             <View style={styles.header}>
-                <Text style={styles.title}>Lista de Compras</Text>
+                <View style={styles.headerTop}>
+                    <Text style={styles.title}>Lista de Compras</Text>
+                    <TouchableOpacity
+                        style={styles.settingsButton}
+                        onPress={() => router.push('/conceptos/categorias-compras')}
+                    >
+                        <Settings color="#fff" size={24} />
+                    </TouchableOpacity>
+                </View>
                 {estadisticas && (
                     <View style={styles.totalCard}>
                         <Text style={styles.totalLabel}>
@@ -692,6 +701,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
+    },
+    headerTop: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    settingsButton: {
+        padding: 8,
     },
     title: {
         fontSize: 28,
