@@ -10,7 +10,10 @@ import {
     View
 } from "react-native";
 import { initDB } from "../database/database";
-import { editarConceptoIngreso, eliminarConceptoIngreso, getConceptosIngreso, guardarConceptoIngreso } from "../services/ingresosService";
+import {
+    editarConceptoIngreso, eliminarConceptoIngreso, getConceptosIngreso, guardarConceptoIngreso,
+    toggleActivoIngreso
+} from "../services/ingresosService";
 
 export const options = {
     headerShown: false,
@@ -54,7 +57,14 @@ export default function ConceptosIngresos() {
         //alert("Concepto de Ingreso guardado correctamente ✅");
     };
     // Lógica para guardar el concepto de ingreso en la base de datos
-
+    const toggleActivo = async (id: number) => {
+        try {
+            await toggleActivoIngreso(id);
+            cargarDatos();
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Error al cambiar el estado");
+        }
+    };
     const limpiarCampo = () => {
         setConceptoIngreso("");
         setConceptoSeleccionado(null);
@@ -108,6 +118,13 @@ export default function ConceptosIngresos() {
                     </Text>
                 </View>
                 <View style={styles.cardActions}>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.botonToggle]}
+                        onPress={() => toggleActivo(item.id)}
+                    >
+                        <Text style={styles.botonTexto}>{item.activo ? "🔴" : "🟢"}</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.actionButton, styles.editButton]}
                         onPress={() => abrirModalEditar(item)}
@@ -167,7 +184,7 @@ export default function ConceptosIngresos() {
                             <Text style={styles.inputLabel}>Descripción del concepto *</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Ej: Alquiler, Servicios, Alimentación..."
+                                placeholder="Ej: Sueldo, Quincena, Bonificación..."
                                 value={conceptoIngreso}
                                 onChangeText={setConceptoIngreso}
                                 autoFocus
@@ -279,11 +296,18 @@ const styles = StyleSheet.create({
         color: "#16a34a",
     },
     estadoInactivo: {
-        color: "#9ca3af",
+        color: "#dc3545",
     },
     cardActions: {
         flexDirection: "row",
         gap: 8,
+    },
+    botonToggle: {
+        padding: 8,
+        backgroundColor: "#eee"
+    },
+    botonTexto: {
+        fontSize: 17,
     },
     actionButton: {
         width: 36,

@@ -2,26 +2,13 @@ import { db } from "../database/database";
 
 // Guardar o actualizar concepto de ingreso
 export async function guardarConceptoIngreso(concepto: string) {
-  /*// Primero verificamos si ya existe un concepto de ingreso registrado para ese concepto
-  const existente = await db.getFirstAsync(
-    "SELECT id FROM IngresosConceptos WHERE concepto = ?",
-    [concepto]
-  );
-
-  if (existente) {
-    // Si existe, actualizamos el monto
-    await db.runAsync(
-      "UPDATE IngresosConceptos SET concepto = ? WHERE id = ?",
-      [concepto, existente.id]
-    );
-  } else {
-    // Si no existe, insertamos un nuevo registro*/
   await db.runAsync("INSERT INTO IngresosConceptos (concepto) VALUES (?)", [
     concepto,
   ]);
-  //}
 }
-
+export async function toggleActivoIngreso(id: number) {
+  await db.runAsync("UPDATE IngresosConceptos SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE id = ?", [id]);
+}
 export async function editarConceptoIngreso(concepto: string, id: number) {
   await db.runAsync("UPDATE IngresosConceptos SET concepto = ? WHERE id = ?", [
     concepto,
@@ -34,7 +21,7 @@ export async function eliminarConceptoIngreso(id: number) {
 // Obtener todos los conceptos de ingreso activos
 export async function getConceptosIngreso() {
   return await db.getAllAsync(
-    "SELECT * FROM IngresosConceptos WHERE activo = 1 ORDER BY concepto ASC"
+    "SELECT * FROM IngresosConceptos /*WHERE activo = 1 */ORDER BY concepto ASC"
   );
 }
 // Obtener todos los conceptos de ingreso activos
@@ -48,8 +35,8 @@ export async function getIngresosPorMes(mes: string) {
   console.log("Obteniendo ingresos para el mes:", mes);
   return await db.getAllAsync(
     "SELECT i.*, ic.concepto as concepto_ingreso FROM ingresos i " +
-      "LEFT JOIN IngresosConceptos ic ON i.id_concepto = ic.id " +
-      "WHERE strftime('%m-%Y', fecha) = ? ORDER BY id DESC",
+    "LEFT JOIN IngresosConceptos ic ON i.id_concepto = ic.id " +
+    "WHERE strftime('%m-%Y', fecha) = ? ORDER BY id DESC",
     [mes]
   );
 }

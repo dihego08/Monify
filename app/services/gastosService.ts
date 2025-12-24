@@ -3,7 +3,7 @@ import { db } from "../database/database";
 // Obtener todos los conceptos de gasto activos
 export async function getConceptosGasto() {
   return await db.getAllAsync(
-    "SELECT * FROM GastosConceptos WHERE activo = 1 ORDER BY concepto ASC"
+    "SELECT * FROM GastosConceptos /*WHERE activo = 1 */ORDER BY concepto ASC"
   );
 }
 export async function editarConceptoGasto(concepto: string, id: number) {
@@ -15,6 +15,12 @@ export async function editarConceptoGasto(concepto: string, id: number) {
 export async function eliminarConceptoGasto(id: number) {
   await db.runAsync(
     "DELETE FROM GastosConceptos WHERE id = ?",
+    [id]
+  );
+}
+export async function toggleActivoGasto(id: number) {
+  await db.runAsync(
+    "UPDATE GastosConceptos SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE id = ?",
     [id]
   );
 }

@@ -14,7 +14,8 @@ import {
     editarConceptoGasto,
     eliminarConceptoGasto,
     getConceptosGasto,
-    guardarConceptoGasto
+    guardarConceptoGasto,
+    toggleActivoGasto
 } from "../services/gastosService";
 
 export const options = {
@@ -75,7 +76,14 @@ export default function ConceptosGastos() {
             console.error(error);
         }
     };
-
+    const toggleActivo = async (id: number) => {
+        try {
+            await toggleActivoGasto(id);
+            cargarDatos();
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Error al cambiar el estado");
+        }
+    };
     const handleEliminar = (item: any) => {
         Alert.alert(
             "Confirmar eliminación",
@@ -119,6 +127,12 @@ export default function ConceptosGastos() {
                     </Text>
                 </View>
                 <View style={styles.cardActions}>
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.botonToggle]}
+                        onPress={() => toggleActivo(item.id)}
+                    >
+                        <Text style={styles.botonTexto}>{item.activo ? "🔴" : "🟢"}</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.actionButton, styles.editButton]}
                         onPress={() => abrirModalEditar(item)}
@@ -286,10 +300,10 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     estadoActivo: {
-        color: "#dc3545",
+        color: "#16a34a",
     },
     estadoInactivo: {
-        color: "#9ca3af",
+        color: "#dc3545",
     },
     cardActions: {
         flexDirection: "row",
@@ -301,6 +315,13 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         justifyContent: "center",
         alignItems: "center",
+    },
+    botonToggle: {
+        padding: 8,
+        backgroundColor: "#eee"
+    },
+    botonTexto: {
+        fontSize: 17,
     },
     editButton: {
         backgroundColor: "#dbeafe",
