@@ -5,7 +5,7 @@ import { Calendar, Edit2, MoreVertical, Plus, Search, Trash2, TrendingDown } fro
 import { useCallback, useState } from "react";
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
-import { actualizarEstadoGasto, actualizarGastoMensual, eliminarGastoPorMes, getConceptosGasto, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
+import { actualizarEstadoGasto, actualizarGastoMensual, eliminarGastoPorMes, getConceptosGastoActivos, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
 
 export default function RecordsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
@@ -49,7 +49,7 @@ export default function RecordsScreen() {
     }
 
     async function cargarDatos() {
-        const listaConceptos = await getConceptosGasto();
+        const listaConceptos = await getConceptosGastoActivos();
         setConceptos(listaConceptos);
 
         const mesFormateado = String(mesFiltro).padStart(2, '0');

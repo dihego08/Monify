@@ -6,6 +6,11 @@ export async function getConceptosGasto() {
     "SELECT * FROM GastosConceptos /*WHERE activo = 1 */ORDER BY concepto ASC"
   );
 }
+export async function getConceptosGastoActivos() {
+  return await db.getAllAsync(
+    "SELECT * FROM GastosConceptos WHERE activo = 1 ORDER BY concepto ASC"
+  );
+}
 export async function editarConceptoGasto(concepto: string, id: number) {
   await db.runAsync(
     "UPDATE GastosConceptos SET concepto = ? WHERE id = ?",

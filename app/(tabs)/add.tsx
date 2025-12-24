@@ -29,7 +29,7 @@ import SelectMesAnio from "../componentes/SelectMesAnio";
 import {
     actualizarIngresoMensual,
     eliminarConceptoPorMes,
-    getConceptosIngreso,
+    getConceptosIngresoActivos,
     getIngresosPorMes,
     guardarIngresoMensual
 } from "../services/ingresosService";
@@ -78,7 +78,7 @@ export default function IngresosScreen() {
 
     async function cargarDatos() {
         try {
-            const listaConceptos = await getConceptosIngreso();
+            const listaConceptos = await getConceptosIngresoActivos();
             setConceptos(listaConceptos);
 
             const mesAnioFiltro = `${String(mesFiltro).padStart(2, '0')}-${anioFiltro}`;

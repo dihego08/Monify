@@ -24,6 +24,11 @@ export async function getConceptosIngreso() {
     "SELECT * FROM IngresosConceptos /*WHERE activo = 1 */ORDER BY concepto ASC"
   );
 }
+export async function getConceptosIngresoActivos() {
+  return await db.getAllAsync(
+    "SELECT * FROM IngresosConceptos WHERE activo = 1 ORDER BY concepto ASC"
+  );
+}
 // Obtener todos los conceptos de ingreso activos
 export async function eliminarConceptoPorMes(id: number) {
   console.log("Eliminando ingreso con ID:", id);
