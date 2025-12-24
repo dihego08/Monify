@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import {
     Alert,
     FlatList,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -174,45 +177,63 @@ export default function ConceptosIngresos() {
                 transparent
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>
-                            {modoEdicion ? "Editar Concepto" : "Nuevo Concepto"}
-                        </Text>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Descripción del concepto *</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Ej: Sueldo, Quincena, Bonificación..."
-                                value={conceptoIngreso}
-                                onChangeText={setConceptoIngreso}
-                                autoFocus
-                            />
-                        </View>
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelBtn}
-                                onPress={() => {
-                                    setModalVisible(false);
-                                    limpiarCampo();
-                                }}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.modalOverlay}
+                        onPress={() => setModalVisible(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={styles.modalContainer}
+                            onPress={(e) => e.stopPropagation()}
+                        >
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
                             >
-                                <Text style={styles.cancelBtnText}>Cancelar</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.saveBtn}
-                                onPress={guardarCambios}
-                            >
-                                <Text style={styles.saveBtnText}>
-                                    {modoEdicion ? "Actualizar" : "Guardar"}
+                                <Text style={styles.modalTitle}>
+                                    {modoEdicion ? "Editar Concepto" : "Nuevo Concepto"}
                                 </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Descripción del concepto *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Ej: Sueldo, Quincena, Bonificación..."
+                                        value={conceptoIngreso}
+                                        onChangeText={setConceptoIngreso}
+                                        autoFocus
+                                    />
+                                </View>
+
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelBtn}
+                                        onPress={() => {
+                                            setModalVisible(false);
+                                            limpiarCampo();
+                                        }}
+                                    >
+                                        <Text style={styles.cancelBtnText}>Cancelar</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.saveBtn}
+                                        onPress={guardarCambios}
+                                    >
+                                        <Text style={styles.saveBtnText}>
+                                            {modoEdicion ? "Actualizar" : "Guardar"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );
