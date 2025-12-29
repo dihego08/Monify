@@ -49,6 +49,10 @@ export async function eliminarListaCompra(
     "DELETE FROM ListaCompras WHERE id = ?",
     [id]
   );
+  await db.runAsync(
+    "DELETE FROM ItemsCompras WHERE id_lista = ?",
+    [id]
+  );
 }
 //agregarListaCompra
 export async function agregarListaCompra(
