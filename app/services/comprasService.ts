@@ -84,7 +84,6 @@ export async function marcarComoComprado(
 
 // Alternar estado de comprado (sin registrar precio)
 export async function toggleComprado(id: number) {
-  console.log("ENTRO AKI " + id)
   await db.runAsync(
     `UPDATE ItemsCompras 
          SET comprado = CASE WHEN comprado = 0 THEN 1 ELSE 0 END,

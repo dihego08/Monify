@@ -573,7 +573,7 @@ export default function ShoppingScreen() {
                                         >
                                             <ShoppingCart
                                                 size={20}
-                                                color={tipoLista === 'SHOPPING' ? '#fff' : '#459c4f'}
+                                                color={tipoLista === 'SHOPPING' ? '#fff' : '#007bff'}
                                             />
                                             <Text
                                                 style={[
@@ -594,7 +594,7 @@ export default function ShoppingScreen() {
                                         >
                                             <List
                                                 size={20}
-                                                color={tipoLista === 'GENERAL' ? '#fff' : '#459c4f'}
+                                                color={tipoLista === 'GENERAL' ? '#fff' : '#007bff'}
                                             />
                                             <Text
                                                 style={[
@@ -1073,18 +1073,18 @@ const styles = StyleSheet.create({
         padding: 14,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: '#459c4f',
+        borderColor: '#007bff',
         backgroundColor: '#fff',
     },
 
     typeOptionActive: {
-        backgroundColor: '#459c4f',
+        backgroundColor: '#007bff',
     },
 
     typeText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#459c4f',
+        color: '#007bff',
     },
 
     typeTextActive: {
