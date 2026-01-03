@@ -31,15 +31,17 @@ export async function agregarItemCompra(
 }
 
 
+
 // Editar Lista
 export async function editarListaCompra(
   id: number,
   nombre: string,
-  categoria: string
+  categoria: string,
+  tipo: string
 ) {
   await db.runAsync(
-    "UPDATE ListaCompras SET nombre = ?, categoria = ? WHERE id = ?",
-    [nombre, categoria, id]
+    "UPDATE ListaCompras SET nombre = ?, categoria = ?, type = ? WHERE id = ?",
+    [nombre, categoria, tipo, id]
   );
 }
 export async function eliminarListaCompra(
@@ -57,11 +59,12 @@ export async function eliminarListaCompra(
 //agregarListaCompra
 export async function agregarListaCompra(
   nombre: string,
-  categoria: string
+  categoria: string,
+  tipo: string
 ) {
   await db.runAsync(
-    "INSERT INTO ListaCompras (nombre, categoria) VALUES (?, ?)",
-    [nombre, categoria]
+    "INSERT INTO ListaCompras (nombre, categoria, type) VALUES (?, ?, ?)",
+    [nombre, categoria, tipo]
   );
 }
 
@@ -81,6 +84,7 @@ export async function marcarComoComprado(
 
 // Alternar estado de comprado (sin registrar precio)
 export async function toggleComprado(id: number) {
+  console.log("ENTRO AKI " + id)
   await db.runAsync(
     `UPDATE ItemsCompras 
          SET comprado = CASE WHEN comprado = 0 THEN 1 ELSE 0 END,

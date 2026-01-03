@@ -68,6 +68,8 @@ export default function ShoppingScreen() {
     const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
     const [soloNoComprados, setSoloNoComprados] = useState(false);
 
+    const [tipoLista, setTipoLista] = useState<'SHOPPING' | 'GENERAL'>('SHOPPING');
+
     useFocusEffect(
         useCallback(() => {
             initDB();
@@ -100,6 +102,7 @@ export default function ShoppingScreen() {
     const abrirModalNuevaLista = () => {
         setCategoriaSeleccionada("");
         setNombreLista("");
+        setTipoLista('SHOPPING'); // default
         setModoEdicion(false);
         setListaSeleccionada(null);
         setModalVisibleLista(true);
@@ -163,13 +166,13 @@ export default function ShoppingScreen() {
 
         try {
             if (modoEdicion && listaSeleccionada) {
-                await editarListaCompra(listaSeleccionada.id, nombreLista, categoriaSeleccionada);
+                await editarListaCompra(listaSeleccionada.id, nombreLista, categoriaSeleccionada, tipoLista);
                 Alert.alert("Éxito", "Lista actualizada correctamente");
                 setModoEdicion(false);
                 setListaSeleccionada(null);
                 setCategoriaSeleccionada('');
             } else {
-                await agregarListaCompra(nombreLista, categoriaSeleccionada);
+                await agregarListaCompra(nombreLista, categoriaSeleccionada, tipoLista);
                 Alert.alert("Éxito", "Lista agregada");
             }
             setNombreLista("");
@@ -182,15 +185,24 @@ export default function ShoppingScreen() {
     };
 
     const handleToggleComprado = async (item: any) => {
-        if (!item.comprado) {
-            setItemSeleccionado(item);
-            setPrecio("");
-            setModalCompraVisible(true);
+        if (listaSeleccionada?.type === 'SHOPPING') {
+            if (!item.comprado) {
+                setItemSeleccionado(item);
+                setPrecio("");
+                setModalCompraVisible(true);
+            } else {
+                await toggleComprado(item.id);
+                await cargarDatos();
+            }
         } else {
+            // GENERAL
             await toggleComprado(item.id);
             await cargarDatos();
+            const listaItems = await getItemsCompras(listaSeleccionada.id);
+            setItemsLista(listaItems);
         }
     };
+
 
     const handleToggleLista = async (item: any) => {
         limpiarFormularioItem();
@@ -547,6 +559,53 @@ export default function ShoppingScreen() {
                                         value={nombreLista}
                                         onChangeText={setNombreLista}
                                     />
+                                </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Tipo de lista *</Text>
+
+                                    <View style={styles.typeSelector}>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.typeOption,
+                                                tipoLista === 'SHOPPING' && styles.typeOptionActive
+                                            ]}
+                                            onPress={() => setTipoLista('SHOPPING')}
+                                        >
+                                            <ShoppingCart
+                                                size={20}
+                                                color={tipoLista === 'SHOPPING' ? '#fff' : '#459c4f'}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.typeText,
+                                                    tipoLista === 'SHOPPING' && styles.typeTextActive
+                                                ]}
+                                            >
+                                                Compras
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.typeOption,
+                                                tipoLista === 'GENERAL' && styles.typeOptionActive
+                                            ]}
+                                            onPress={() => setTipoLista('GENERAL')}
+                                        >
+                                            <List
+                                                size={20}
+                                                color={tipoLista === 'GENERAL' ? '#fff' : '#459c4f'}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.typeText,
+                                                    tipoLista === 'GENERAL' && styles.typeTextActive
+                                                ]}
+                                            >
+                                                General
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View style={styles.inputGroup}>
@@ -1000,4 +1059,36 @@ const styles = StyleSheet.create({
         backgroundColor: "#e5e7eb",
         marginVertical: 2,
     },
+    typeSelector: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+
+    typeOption: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 14,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#459c4f',
+        backgroundColor: '#fff',
+    },
+
+    typeOptionActive: {
+        backgroundColor: '#459c4f',
+    },
+
+    typeText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#459c4f',
+    },
+
+    typeTextActive: {
+        color: '#fff',
+    },
+
 });

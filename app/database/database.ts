@@ -1,8 +1,13 @@
 import * as SQLite from "expo-sqlite";
 export const db = SQLite.openDatabaseSync("finanzasv1.db");
 
-export function initDB() {
-    db.execAsync(`
+export async function initDB() {
+  db.execAsync(`
+    CREATE TABLE IF NOT EXISTS DB_Metadata (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS ingresos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       id_concepto TEXT NOT NULL,
@@ -74,4 +79,30 @@ export function initDB() {
         (9, 'Farmacia', '💊'),
         (10, 'Otros', '📦');
   `);
+
+  // 2. Migraciones
+  const version = await getDBVersion();
+
+  if (version < 1) {
+    // ➕ agregar tipo de lista
+    await db.execAsync(`
+            ALTER TABLE ListaCompras
+            ADD COLUMN type TEXT DEFAULT 'SHOPPING';
+        `);
+
+    await setDBVersion(1);
+  }
+}
+
+async function getDBVersion(): Promise<number> {
+  const result = await db.getFirstAsync(
+    "SELECT value FROM DB_Metadata WHERE key = 'db_version'"
+  );
+  return result ? Number(result.value) : 0;
+}
+async function setDBVersion(version: number) {
+  await db.runAsync(
+    "INSERT OR REPLACE INTO DB_Metadata (key, value) VALUES ('db_version', ?)",
+    [version.toString()]
+  );
 }
