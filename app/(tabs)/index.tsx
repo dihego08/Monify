@@ -1,3 +1,4 @@
+import { useNotifications } from "@/hooks/useNotifications";
 import { useFocusEffect } from "expo-router";
 import {
   AlertCircle,
@@ -47,6 +48,9 @@ export default function Dashboard() {
   });
   const [gastosVencimiento, setGastosVencimiento] = useState<GastoVencimiento[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Inicializar sistema de notificaciones
+  useNotifications();
 
   useFocusEffect(
     useCallback(() => {
@@ -233,8 +237,8 @@ export default function Dashboard() {
                 styles.progressFill,
                 {
                   width: `${estadisticas.totalPagados + estadisticas.totalPendientes > 0
-                      ? (estadisticas.totalPagados / (estadisticas.totalPagados + estadisticas.totalPendientes)) * 100
-                      : 0
+                    ? (estadisticas.totalPagados / (estadisticas.totalPagados + estadisticas.totalPendientes)) * 100
+                    : 0
                     }%`
                 }
               ]}

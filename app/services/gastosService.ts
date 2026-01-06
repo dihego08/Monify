@@ -1,4 +1,10 @@
 import { db } from "../database/database";
+import {
+  calcularFechaNotificacion,
+  cancelNotification,
+  generarIdNotificacion,
+  scheduleNotification,
+} from "./notificationsService";
 
 // Obtener todos los conceptos de gasto activos
 export async function getConceptosGasto() {
@@ -53,6 +59,10 @@ export async function guardarConceptoGasto(concepto: string) {
 }
 export async function eliminarGastoPorMes(id: number) {
   console.log('Eliminando gasto con ID:', id);
+
+  // Cancelar notificación antes de eliminar
+  await cancelarNotificacionGasto(id);
+
   return await db.runAsync(
     "DELETE FROM GastosMensuales WHERE id = ?",
     [id]
@@ -77,10 +87,15 @@ export async function guardarGastoMensual(
   fecha_limite: string,
   descripcion: string,
 ) {
-  await db.runAsync(
+  const result = await db.runAsync(
     "INSERT INTO GastosMensuales (concepto_id, mes, monto, fecha_limite, descripcion) VALUES (?, ?, ?, ?, ?)",
     [concepto_id, mes, monto, fecha_limite, descripcion]
   );
+
+  // Programar notificación si tiene fecha límite
+  if (fecha_limite && result.lastInsertRowId) {
+    await programarNotificacionGasto(result.lastInsertRowId, concepto_id, fecha_limite, monto);
+  }
 }
 export async function actualizarGastoMensual(
   concepto_id: number,
@@ -94,10 +109,16 @@ export async function actualizarGastoMensual(
     "UPDATE GastosMensuales SET concepto_id = ?, mes = ?, monto = ?, fecha_limite = ?, descripcion = ? WHERE id = ?",
     [concepto_id, mes, monto, fecha_limite, descripcion, id]
   );
+
+  // Cancelar notificación anterior y programar nueva
+  await cancelarNotificacionGasto(id);
+  if (fecha_limite) {
+    await programarNotificacionGasto(id, concepto_id, fecha_limite, monto);
+  }
 }
 // Obtener el total de gastos de un mes
 export async function getTotalGastosPorMes(mes: string) {
-  const total = await db.getFirstAsync(
+  const total = await db.getFirstAsync<{ total: number }>(
     `SELECT SUM(monto) as total
      FROM GastosMensuales
      WHERE mes = ?`,
@@ -111,4 +132,137 @@ export async function actualizarEstadoGasto(id: number, pagado: boolean) {
     "UPDATE GastosMensuales SET pagado = ? WHERE id = ?",
     [pagado, id]
   );
+
+  // Si se marca como pagado, cancelar la notificación
+  if (pagado) {
+    await cancelarNotificacionGasto(id);
+  } else {
+    // Si se desmarca como pagado, re-programar la notificación
+    const gasto = await db.getFirstAsync<{
+      concepto_id: number;
+      fecha_limite: string;
+      monto: number;
+    }>(
+      "SELECT concepto_id, fecha_limite, monto FROM GastosMensuales WHERE id = ?",
+      [id]
+    );
+    if (gasto?.fecha_limite) {
+      await programarNotificacionGasto(id, gasto.concepto_id, gasto.fecha_limite, gasto.monto);
+    }
+  }
+}
+
+// ========== FUNCIONES DE NOTIFICACIONES ==========
+
+/**
+ * Programa una notificación para un gasto específico
+ */
+async function programarNotificacionGasto(
+  gastoId: number,
+  conceptoId: number,
+  fechaLimite: string,
+  monto: number
+): Promise<void> {
+  try {
+    // Obtener el nombre del concepto
+    const concepto = await db.getFirstAsync<{ concepto: string }>(
+      "SELECT concepto FROM GastosConceptos WHERE id = ?",
+      [conceptoId]
+    );
+
+    if (!concepto) {
+      console.warn('Concepto no encontrado para el gasto:', gastoId);
+      return;
+    }
+
+    // Calcular fecha de notificación (3 días antes a las 9:00 AM)
+    const fechaNotificacion = calcularFechaNotificacion(fechaLimite, 3);
+
+    if (!fechaNotificacion) {
+      console.warn('No se pudo calcular fecha de notificación para:', fechaLimite);
+      return;
+    }
+
+    // Generar ID único para la notificación
+    const notificationId = generarIdNotificacion(gastoId);
+
+    // Formatear el monto
+    const montoFormateado = new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+    }).format(monto);
+
+    // Programar la notificación
+    await scheduleNotification(
+      notificationId,
+      '💰 Recordatorio de Pago',
+      `${concepto.concepto}: ${montoFormateado} vence en 3 días (${fechaLimite})`,
+      fechaNotificacion,
+      { gastoId, conceptoId, monto, fechaLimite }
+    );
+
+    console.log(`Notificación programada para gasto ${gastoId}: ${concepto.concepto}`);
+  } catch (error) {
+    console.error('Error al programar notificación de gasto:', error);
+  }
+}
+
+/**
+ * Cancela la notificación de un gasto específico
+ */
+async function cancelarNotificacionGasto(gastoId: number): Promise<void> {
+  try {
+    const notificationId = generarIdNotificacion(gastoId);
+    await cancelNotification(notificationId);
+    console.log(`Notificación cancelada para gasto ${gastoId}`);
+  } catch (error) {
+    console.error('Error al cancelar notificación de gasto:', error);
+  }
+}
+
+/**
+ * Sincroniza todas las notificaciones de gastos pendientes
+ * Útil para ejecutar al iniciar la app
+ */
+export async function sincronizarNotificaciones(): Promise<void> {
+  try {
+    console.log('Sincronizando notificaciones de gastos pendientes...');
+
+    // Obtener todos los gastos pendientes con fecha límite
+    const gastosPendientes = await db.getAllAsync<{
+      id: number;
+      concepto_id: number;
+      fecha_limite: string;
+      monto: number;
+    }>(
+      `SELECT id, concepto_id, fecha_limite, monto 
+       FROM GastosMensuales 
+       WHERE pagado = 0 AND fecha_limite IS NOT NULL`
+    );
+
+    // Cancelar todas las notificaciones existentes de gastos
+    // (para evitar duplicados)
+    for (const gasto of gastosPendientes) {
+      await cancelarNotificacionGasto(gasto.id);
+    }
+
+    // Re-programar notificaciones para gastos pendientes
+    let programadas = 0;
+    for (const gasto of gastosPendientes) {
+      const fechaNotificacion = calcularFechaNotificacion(gasto.fecha_limite, 3);
+      if (fechaNotificacion) {
+        await programarNotificacionGasto(
+          gasto.id,
+          gasto.concepto_id,
+          gasto.fecha_limite,
+          gasto.monto
+        );
+        programadas++;
+      }
+    }
+
+    console.log(`Sincronización completada: ${programadas} notificaciones programadas`);
+  } catch (error) {
+    console.error('Error al sincronizar notificaciones:', error);
+  }
 }
