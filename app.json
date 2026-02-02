@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.monify.app"
+      "bundleIdentifier": "com.monifydb.app"
     },
     "android": {
-      "package": "com.monify.app",
+      "package": "com.monifydb.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
