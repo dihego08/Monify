@@ -6,12 +6,15 @@ import { useCallback, useState } from "react";
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import SelectMesAnio from "../componentes/SelectMesAnio";
 import { actualizarEstadoGasto, actualizarGastoMensual, eliminarGastoPorMes, getConceptosGastoActivos, getGastosPorMes, guardarGastoMensual } from "../services/gastosService";
+import { getCuentas, Cuenta } from "../services/movimientosService";
 
 export default function RecordsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [conceptos, setConceptos] = useState<any[]>([]);
     const [gastos, setGastos] = useState<any[]>([]);
+    const [cuentas, setCuentas] = useState<Cuenta[]>([]);
     const [conceptoSeleccionado, setConceptoSeleccionado] = useState<number | null>(null);
+    const [cuenta_id, setCuenta_id] = useState<number | null>(1);
     const [monto, setMonto] = useState<string>("");
     const [descripcion, setDescripcion] = useState<string>("");
     const [fechaLimite, setFechaLimite] = useState<Date>(new Date());
@@ -52,6 +55,15 @@ export default function RecordsScreen() {
         const listaConceptos = await getConceptosGastoActivos();
         setConceptos(listaConceptos);
 
+        const listaCuentas = await getCuentas();
+        setCuentas(listaCuentas);
+        
+        // Asignar default de pagos si no hay item seleccionado y hay cuentas
+        if (!modoEdicion && listaCuentas.length > 0) {
+             const defaultCuenta = listaCuentas.find(c => c.es_default_pagos === 1);
+             setCuenta_id(defaultCuenta ? defaultCuenta.id : listaCuentas[0].id);
+        }
+
         const mesFormateado = String(mesFiltro).padStart(2, '0');
         console.log(`Filtrando: ${mesFormateado}-${anioFiltro}`);
         const listaGastos = await getGastosPorMes(`${mesFormateado}-${anioFiltro}`);
@@ -68,12 +80,12 @@ export default function RecordsScreen() {
         const mesFormateado = `${String(mes).padStart(2, '0')}-${anio}`;
 
         if (modoEdicion) {
-            await actualizarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion, itemSeleccionado.id);
+            await actualizarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion, itemSeleccionado.id, cuenta_id || 1);
             Alert.alert("Éxito", "Gasto actualizado correctamente");
             setModoEdicion(false);
             setItemSeleccionado(null);
         } else {
-            await guardarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion);
+            await guardarGastoMensual(conceptoSeleccionado, mesFormateado, parseFloat(monto), fechaISO, descripcion, cuenta_id || 1);
             Alert.alert("Éxito", "Gasto registrado correctamente");
         }
 
@@ -129,6 +141,7 @@ export default function RecordsScreen() {
 
         setMonto(String(item.monto));
         setConceptoSeleccionado(Number(item.concepto_id));
+        setCuenta_id(Number(item.cuenta_id || 1));
         setFechaLimite(new Date(item.fecha_limite));
         setDescripcion(item.descripcion);
 
@@ -141,6 +154,8 @@ export default function RecordsScreen() {
     const limpiarFormulario = () => {
         setMonto("");
         setConceptoSeleccionado(null);
+        const defaultCuenta = cuentas.find(c => c.es_default_pagos === 1);
+        setCuenta_id(defaultCuenta ? defaultCuenta.id : (cuentas.length > 0 ? cuentas[0].id : 1));
         setFechaLimite(new Date());
         setDescripcion("");
     }
@@ -352,6 +367,21 @@ export default function RecordsScreen() {
                                     onMesChange={setMes}
                                     onAnioChange={setAnio}
                                 />
+
+                                {cuentas.length > 0 && (
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Cuenta Origen</Text>
+                                        <Picker
+                                            selectedValue={cuenta_id}
+                                            onValueChange={(value) => setCuenta_id(value)}
+                                            style={styles.picker}
+                                        >
+                                            {cuentas.map((c) => (
+                                                <Picker.Item key={c.id} label={c.nombre} value={c.id} />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                )}
 
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.inputLabel}>Monto *</Text>
@@ -769,11 +799,19 @@ const styles = StyleSheet.create({
     },
     inputGroup: {
         marginBottom: 16,
-    }, inputLabel: {
+    },
+    inputLabel: {
         fontSize: 14,
         fontWeight: "600",
         color: "#374151",
         marginBottom: 8,
+    },
+    picker: {
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 12,
+        marginBottom: 16,
+        backgroundColor: "#f9fafb",
     },
     montoInput: {
         flexDirection: "row",

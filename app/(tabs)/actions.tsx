@@ -98,40 +98,42 @@ export default function ActionsScreen() {
                                         Administra las categorías de tus ingresos
                                     </Text>
                                 </View>
-                                <Text style={styles.arrow}>→</Text>
+                                <View style={styles.arrowContainer}>
+                                    <Text style={styles.arrow}>→</Text>
+                                </View>
                             </TouchableOpacity>
 
-                            {/* Card Gastos */}
+                            {/* Card Egresos */}
                             <TouchableOpacity
-                                style={[styles.card, styles.cardGastos]}
+                                style={[styles.card, styles.cardEgresos]}
                                 onPress={() => handleNavigation("/conceptos/egresos")}
                                 activeOpacity={0.8}
                             >
-                                <View style={[styles.iconContainer, styles.iconGastos]}>
+                                <View style={[styles.iconContainer, styles.iconEgresos]}>
                                     <Text style={styles.icon}>💸</Text>
                                 </View>
                                 <View style={styles.cardContent}>
-                                    <Text style={styles.cardTitle}>Conceptos de Gastos</Text>
+                                    <Text style={styles.cardTitle}>Conceptos de Pagos</Text>
                                     <Text style={styles.cardDescription}>
-                                        Administra las categorías de tus gastos
+                                        Organiza los tipos de pagos mensuales
                                     </Text>
                                 </View>
                                 <Text style={styles.arrow}>→</Text>
                             </TouchableOpacity>
 
-                            {/* Card Calendario */}
+                            {/* Card Cuentas */}
                             <TouchableOpacity
-                                style={[styles.card, styles.cardCalendario]}
-                                onPress={() => handleNavigation("/reportes")}
+                                style={[styles.card, styles.cardCuentas]}
+                                onPress={() => handleNavigation("/cuentas")}
                                 activeOpacity={0.8}
                             >
-                                <View style={[styles.iconContainer, styles.iconCalendario]}>
-                                    <Text style={styles.icon}>📅</Text>
+                                <View style={[styles.iconContainer, styles.iconCuentas]}>
+                                    <Text style={styles.icon}>💳</Text>
                                 </View>
                                 <View style={styles.cardContent}>
-                                    <Text style={styles.cardTitle}>Calendario de Pagos</Text>
+                                    <Text style={styles.cardTitle}>Mis Cuentas</Text>
                                     <Text style={styles.cardDescription}>
-                                        Visualiza tus pagos programados e ingresos
+                                        Administra tus billeteras y cuentas bancarias
                                     </Text>
                                 </View>
                                 <Text style={styles.arrow}>→</Text>
@@ -226,15 +228,15 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: "#10b981",
     },
-    cardGastos: {
+    cardEgresos: {
         backgroundColor: "#fef2f2",
         borderLeftWidth: 4,
         borderLeftColor: "#ef4444",
     },
-    cardCalendario: {
-        backgroundColor: "#eff6ff",
+    cardCuentas: {
+        backgroundColor: "#f5f3ff",
         borderLeftWidth: 4,
-        borderLeftColor: "#3b82f6",
+        borderLeftColor: "#8b5cf6",
     },
     iconContainer: {
         width: 56,
@@ -247,11 +249,11 @@ const styles = StyleSheet.create({
     iconIngresos: {
         backgroundColor: "#d1fae5",
     },
-    iconGastos: {
+    iconEgresos: {
         backgroundColor: "#fee2e2",
     },
-    iconCalendario: {
-        backgroundColor: "#dbeafe",
+    iconCuentas: {
+        backgroundColor: "#ede9fe",
     },
     icon: {
         fontSize: 28,

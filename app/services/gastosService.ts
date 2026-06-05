@@ -86,10 +86,11 @@ export async function guardarGastoMensual(
   monto: number,
   fecha_limite: string,
   descripcion: string,
+  cuenta_id: number = 1
 ) {
   const result = await db.runAsync(
-    "INSERT INTO GastosMensuales (concepto_id, mes, monto, fecha_limite, descripcion) VALUES (?, ?, ?, ?, ?)",
-    [concepto_id, mes, monto, fecha_limite, descripcion]
+    "INSERT INTO GastosMensuales (concepto_id, mes, monto, fecha_limite, descripcion, cuenta_id) VALUES (?, ?, ?, ?, ?, ?)",
+    [concepto_id, mes, monto, fecha_limite, descripcion, cuenta_id]
   );
 
   // Programar notificación si tiene fecha límite
@@ -103,11 +104,12 @@ export async function actualizarGastoMensual(
   monto: number,
   fecha_limite: string,
   descripcion: string,
-  id: number
+  id: number,
+  cuenta_id: number = 1
 ) {
   await db.runAsync(
-    "UPDATE GastosMensuales SET concepto_id = ?, mes = ?, monto = ?, fecha_limite = ?, descripcion = ? WHERE id = ?",
-    [concepto_id, mes, monto, fecha_limite, descripcion, id]
+    "UPDATE GastosMensuales SET concepto_id = ?, mes = ?, monto = ?, fecha_limite = ?, descripcion = ?, cuenta_id = ? WHERE id = ?",
+    [concepto_id, mes, monto, fecha_limite, descripcion, cuenta_id, id]
   );
 
   // Cancelar notificación anterior y programar nueva

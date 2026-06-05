@@ -1,15 +1,28 @@
 import * as SQLite from "expo-sqlite";
 export const db = SQLite.openDatabaseSync("db_finanzas.db");
 
-export function initDB() {
-    db.execAsync(`
+export async function initDB() {
+    await db.execAsync(`
     CREATE TABLE IF NOT EXISTS ingresos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       id_concepto TEXT NOT NULL,
       monto REAL NOT NULL,
       otros TEXT default NULL,
-      fecha TEXT NOT NULL
+      fecha TEXT NOT NULL,
+      cuenta_id INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS Cuentas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        saldo_inicial REAL DEFAULT 0,
+        color TEXT,
+        es_default_pagos INTEGER DEFAULT 0,
+        es_default_hormiga INTEGER DEFAULT 0
+    );
+
+    INSERT OR IGNORE INTO Cuentas (id, nombre, saldo_inicial, color, es_default_pagos, es_default_hormiga) 
+    VALUES (1, 'Billetera Principal', 0, '#3b82f6', 1, 1);
 
     CREATE TABLE IF NOT EXISTS GastosConceptos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,4 +96,9 @@ export function initDB() {
         (9, 'Farmacia', '💊'),
         (10, 'Otros', '📦');
   `);
+
+    // Migraciones seguras para agregar cuenta_id a tablas existentes si ya estaban creadas
+    try { await db.execAsync("ALTER TABLE ingresos ADD COLUMN cuenta_id INTEGER DEFAULT 1;"); } catch (e) {}
+    try { await db.execAsync("ALTER TABLE GastosMensuales ADD COLUMN cuenta_id INTEGER DEFAULT 1;"); } catch (e) {}
+    try { await db.execAsync("ALTER TABLE GastosHormiga ADD COLUMN cuenta_id INTEGER DEFAULT 1;"); } catch (e) {}
 }

@@ -11,10 +11,13 @@ import {
   Alert
 } from "react-native";
 import { Coffee, Trash2, Plus } from "lucide-react-native";
+import { Picker } from "@react-native-picker/picker";
 import {
   addGastoHormiga,
   getGastosHormiga,
-  deleteGastoHormiga
+  deleteGastoHormiga,
+  getCuentas,
+  Cuenta
 } from "../services/movimientosService";
 
 interface GastoHormiga {
@@ -28,10 +31,18 @@ export default function GastosHormigaScreen() {
   const [monto, setMonto] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [gastos, setGastos] = useState<GastoHormiga[]>([]);
+  const [cuentas, setCuentas] = useState<Cuenta[]>([]);
+  const [cuenta_id, setCuenta_id] = useState<number | null>(1);
   const [refreshing, setRefreshing] = useState(false);
 
   const cargarGastos = async () => {
     try {
+      const listaCuentas = await getCuentas();
+      setCuentas(listaCuentas);
+      
+      const defaultCuenta = listaCuentas.find(c => c.es_default_hormiga === 1);
+      setCuenta_id(defaultCuenta ? defaultCuenta.id : (listaCuentas.length > 0 ? listaCuentas[0].id : 1));
+
       const data = await getGastosHormiga();
       setGastos(data);
     } catch (error) {
@@ -58,7 +69,7 @@ export default function GastosHormigaScreen() {
     }
 
     try {
-      await addGastoHormiga(Number(monto), descripcion || "Gasto sin descripción");
+      await addGastoHormiga(Number(monto), descripcion || "Gasto sin descripción", cuenta_id || 1);
       setMonto("");
       setDescripcion("");
       await cargarGastos();
@@ -127,6 +138,21 @@ export default function GastosHormigaScreen() {
               onChangeText={setMonto}
             />
           </View>
+          
+          {cuentas.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Picker
+                  selectedValue={cuenta_id}
+                  onValueChange={(value) => setCuenta_id(value)}
+                  style={styles.picker}
+              >
+                  {cuentas.map((c) => (
+                      <Picker.Item key={c.id} label={c.nombre} value={c.id} />
+                  ))}
+              </Picker>
+            </View>
+          )}
+
           <TextInput
             style={styles.descInput}
             placeholder="¿En qué lo gastaste? (Ej. Café, snacks...)"
@@ -230,6 +256,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1f2937",
     marginBottom: 12,
+  },
+  inputGroup: {
+    marginBottom: 12,
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    backgroundColor: "#f9fafb",
   },
   inputRow: {
     flexDirection: "row",

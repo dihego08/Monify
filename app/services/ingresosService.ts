@@ -51,12 +51,13 @@ export async function guardarIngresoMensual(
   concepto_id: number,
   monto: number,
   otros: string,
-  fecha: string
+  fecha: string,
+  cuenta_id: number = 1
 ) {
   // Si no existe, insertamos un nuevo registro
   await db.runAsync(
-    "INSERT INTO ingresos (id_concepto, monto, otros, fecha) VALUES (?, ?, ?, ?)",
-    [concepto_id, monto, otros, fecha]
+    "INSERT INTO ingresos (id_concepto, monto, otros, fecha, cuenta_id) VALUES (?, ?, ?, ?, ?)",
+    [concepto_id, monto, otros, fecha, cuenta_id]
   );
 }
 export async function actualizarIngresoMensual(
@@ -64,11 +65,12 @@ export async function actualizarIngresoMensual(
   monto: number,
   otros: string,
   fecha: string,
-  id: number
+  id: number,
+  cuenta_id: number = 1
 ) {
   // Si no existe, insertamos un nuevo registro
   await db.runAsync(
-    "UPDATE ingresos set id_concepto = ?, monto = ?, otros = ?, fecha = ? WHERE id = ?",
-    [concepto_id, monto, otros, fecha, id]
+    "UPDATE ingresos set id_concepto = ?, monto = ?, otros = ?, fecha = ?, cuenta_id = ? WHERE id = ?",
+    [concepto_id, monto, otros, fecha, cuenta_id, id]
   );
 }

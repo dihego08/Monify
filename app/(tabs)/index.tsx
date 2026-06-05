@@ -17,7 +17,8 @@ import {
   getEstadisticasMensuales,
   getGastosProximosVencer,
   getSaldoActual,
-  getEstadisticasAnuales
+  getEstadisticasAnuales,
+  getSaldosCuentas
 } from "../services/movimientosService";
 
 interface Estadisticas {
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [chartYear, setChartYear] = useState(new Date().getFullYear());
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [cuentas, setCuentas] = useState<any[]>([]);
 
   // Inicializar sistema de notificaciones
   useNotifications();
@@ -71,12 +73,12 @@ export default function Dashboard() {
       console.log(total);
       const stats = await getEstadisticasMensuales();
       setEstadisticas(stats);
-      console.log("Estadísticas Mensuales:");
-      console.log(stats);
       const gastos = await getGastosProximosVencer();
-      console.log("Gastos Próximos a Vencer:");
-      console.log(gastos);
       setGastosVencimiento(gastos);
+
+      const listaCuentas = await getSaldosCuentas();
+      setCuentas(listaCuentas);
+
       await cargarGrafico();
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -131,12 +133,26 @@ export default function Dashboard() {
         <View style={styles.saldoCard}>
           <DollarSign color="#fff" size={32} />
           <View style={styles.saldoInfo}>
-            <Text style={styles.saldoLabel}>Saldo Actual</Text>
+            <Text style={styles.saldoLabel}>Total Global</Text>
             <Text style={[styles.saldo, { color: saldo >= 0 ? "#10b981" : "#ef4444" }]}>
               S/. {saldo.toFixed(2)}
             </Text>
           </View>
         </View>
+
+        {cuentas.length > 1 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cuentasContainer}>
+            {cuentas.map(cuenta => (
+              <View key={cuenta.id} style={styles.cuentaCard}>
+                <View style={[styles.cuentaColor, { backgroundColor: cuenta.color || '#3b82f6' }]} />
+                <View>
+                  <Text style={styles.cuentaNombre}>{cuenta.nombre}</Text>
+                  <Text style={styles.cuentaSaldo}>S/. {cuenta.saldo.toFixed(2)}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* Tarjetas de estadísticas */}
@@ -340,7 +356,37 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   saldo: {
-    fontSize: 32,
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+  cuentasContainer: {
+    marginTop: 16,
+    paddingBottom: 8,
+  },
+  cuentaCard: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginRight: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 140,
+  },
+  cuentaColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  cuentaNombre: {
+    color: "#e2e8f0",
+    fontSize: 12,
+  },
+  cuentaSaldo: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
   },
   statsContainer: {

@@ -535,10 +535,10 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
 // Gastos Hormiga
 // ==========================================
 
-export async function addGastoHormiga(monto: number, descripcion: string) {
+export async function addGastoHormiga(monto: number, descripcion: string, cuenta_id: number = 1) {
     await db.runAsync(
-        "INSERT INTO GastosHormiga (monto, descripcion) VALUES (?, ?)",
-        [monto, descripcion]
+        "INSERT INTO GastosHormiga (monto, descripcion, cuenta_id) VALUES (?, ?, ?)",
+        [monto, descripcion, cuenta_id]
     );
 }
 
@@ -554,3 +554,74 @@ export async function getGastosHormiga() {
 export async function deleteGastoHormiga(id: number) {
     await db.runAsync("DELETE FROM GastosHormiga WHERE id = ?", [id]);
 }
+
+// ==========================================
+// Cuentas / Billeteras
+// ==========================================
+
+export interface Cuenta {
+    id: number;
+    nombre: string;
+    saldo_inicial: number;
+    color: string;
+    es_default_pagos: number;
+    es_default_hormiga: number;
+}
+
+export async function getCuentas() {
+    return await db.getAllAsync<Cuenta>("SELECT * FROM Cuentas ORDER BY id ASC");
+}
+
+export async function addCuenta(nombre: string, saldo_inicial: number, color: string, es_default_pagos: number, es_default_hormiga: number) {
+    // Si esta cuenta es default, resetear las demás
+    if (es_default_pagos) await db.runAsync("UPDATE Cuentas SET es_default_pagos = 0");
+    if (es_default_hormiga) await db.runAsync("UPDATE Cuentas SET es_default_hormiga = 0");
+
+    await db.runAsync(
+        "INSERT INTO Cuentas (nombre, saldo_inicial, color, es_default_pagos, es_default_hormiga) VALUES (?, ?, ?, ?, ?)",
+        [nombre, saldo_inicial, color, es_default_pagos, es_default_hormiga]
+    );
+}
+
+export async function updateCuenta(id: number, nombre: string, saldo_inicial: number, color: string, es_default_pagos: number, es_default_hormiga: number) {
+    // Si esta cuenta es default, resetear las demás
+    if (es_default_pagos) await db.runAsync("UPDATE Cuentas SET es_default_pagos = 0");
+    if (es_default_hormiga) await db.runAsync("UPDATE Cuentas SET es_default_hormiga = 0");
+
+    await db.runAsync(
+        "UPDATE Cuentas SET nombre = ?, saldo_inicial = ?, color = ?, es_default_pagos = ?, es_default_hormiga = ? WHERE id = ?",
+        [nombre, saldo_inicial, color, es_default_pagos, es_default_hormiga, id]
+    );
+}
+
+export async function deleteCuenta(id: number) {
+    // Evitar eliminar la cuenta 1 (Billetera Principal)
+    if (id === 1) return;
+    await db.runAsync("DELETE FROM Cuentas WHERE id = ?", [id]);
+}
+
+export async function getSaldosCuentas() {
+    const cuentas = await getCuentas();
+    
+    const saldos = [];
+    for (const cuenta of cuentas) {
+        const ingresos = await db.getFirstAsync<{ total: number }>(
+            "SELECT SUM(monto) as total FROM ingresos WHERE cuenta_id = ?", [cuenta.id]
+        );
+        const gastos = await db.getFirstAsync<{ total: number }>(
+            "SELECT SUM(monto) as total FROM GastosMensuales WHERE pagado = 1 AND cuenta_id = ?", [cuenta.id]
+        );
+        const gastosHormiga = await db.getFirstAsync<{ total: number }>(
+            "SELECT SUM(monto) as total FROM GastosHormiga WHERE cuenta_id = ?", [cuenta.id]
+        );
+
+        const saldoFinal = cuenta.saldo_inicial + (ingresos?.total || 0) - (gastos?.total || 0) - (gastosHormiga?.total || 0);
+        
+        saldos.push({
+            ...cuenta,
+            saldo: saldoFinal
+        });
+    }
+    
+    return saldos;
+}

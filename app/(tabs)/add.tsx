@@ -33,12 +33,15 @@ import {
     getIngresosPorMes,
     guardarIngresoMensual
 } from "../services/ingresosService";
+import { getCuentas, Cuenta } from "../services/movimientosService";
 
 export default function IngresosScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [conceptos, setConceptos] = useState<any[]>([]);
     const [ingresos, setIngresos] = useState<any[]>([]);
+    const [cuentas, setCuentas] = useState<Cuenta[]>([]);
     const [concepto_id, setConcepto_id] = useState<number | null>(null);
+    const [cuenta_id, setCuenta_id] = useState<number | null>(1);
     const [monto, setMonto] = useState<string>("");
     const [otros, setOtros] = useState<string>("");
     const [fecha, setFecha] = useState<Date>(new Date());
@@ -80,6 +83,9 @@ export default function IngresosScreen() {
         try {
             const listaConceptos = await getConceptosIngresoActivos();
             setConceptos(listaConceptos);
+
+            const listaCuentas = await getCuentas();
+            setCuentas(listaCuentas);
 
             const mesAnioFiltro = `${String(mesFiltro).padStart(2, '0')}-${anioFiltro}`;
             const listaIngresos = await getIngresosPorMes(mesAnioFiltro);
@@ -138,6 +144,7 @@ export default function IngresosScreen() {
 
         setMonto(String(item.monto));
         setConcepto_id(Number(item.id_concepto));
+        setCuenta_id(Number(item.cuenta_id || 1));
         setFecha(new Date(item.fecha));
 
         setModalVisible(true); // 👈 AL FINAL
@@ -157,12 +164,12 @@ export default function IngresosScreen() {
             const fechaISO = formatearFechaISO(fecha);
 
             if (modoEdicion) {
-                await actualizarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO, itemSeleccionado.id);
+                await actualizarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO, itemSeleccionado.id, cuenta_id || 1);
                 Alert.alert("Éxito", "Ingreso actualizado correctamente");
                 setModoEdicion(false);
                 setItemSeleccionado(null);
             } else {
-                await guardarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO);
+                await guardarIngresoMensual(concepto_id, parseFloat(monto), otros, fechaISO, cuenta_id || 1);
                 Alert.alert("Éxito", "Ingreso registrado correctamente");
             }
 
@@ -179,6 +186,7 @@ export default function IngresosScreen() {
     const limpiarFormulario = () => {
         setMonto("");
         setConcepto_id(null);
+        setCuenta_id(cuentas.length > 0 ? cuentas[0].id : 1);
         setOtros("");
         setFecha(new Date());
     }
@@ -371,6 +379,21 @@ export default function IngresosScreen() {
                                         <Picker.Item key={c.id} label={c.concepto} value={c.id} />
                                     ))}
                                 </Picker>
+
+                                {cuentas.length > 0 && (
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Cuenta / Billetera Destino</Text>
+                                        <Picker
+                                            selectedValue={cuenta_id}
+                                            onValueChange={(value) => setCuenta_id(value)}
+                                            style={styles.picker}
+                                        >
+                                            {cuentas.map((c) => (
+                                                <Picker.Item key={c.id} label={c.nombre} value={c.id} />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                )}
 
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.inputLabel}>Monto *</Text>
