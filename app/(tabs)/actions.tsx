@@ -138,6 +138,23 @@ export default function ActionsScreen() {
                                 </View>
                                 <Text style={styles.arrow}>→</Text>
                             </TouchableOpacity>
+                            {/* Card Calendario */}
+                            <TouchableOpacity
+                                style={[styles.card, styles.cardCalendario]}
+                                onPress={() => handleNavigation("/reportes")}
+                                activeOpacity={0.8}
+                            >
+                                <View style={[styles.iconContainer, styles.iconCalendario]}>
+                                    <Text style={styles.icon}>📅</Text>
+                                </View>
+                                <View style={styles.cardContent}>
+                                    <Text style={styles.cardTitle}>Calendario de Pagos</Text>
+                                    <Text style={styles.cardDescription}>
+                                        Visualiza tus pagos programados e ingresos
+                                    </Text>
+                                </View>
+                                <Text style={styles.arrow}>→</Text>
+                            </TouchableOpacity>
                         </View>
 
                         {/* Botón cerrar */}
@@ -238,6 +255,11 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: "#8b5cf6",
     },
+    cardCalendario: {
+        backgroundColor: "#eff6ff",
+        borderLeftWidth: 4,
+        borderLeftColor: "#3b82f6",
+    },
     iconContainer: {
         width: 56,
         height: 56,
@@ -254,6 +276,9 @@ const styles = StyleSheet.create({
     },
     iconCuentas: {
         backgroundColor: "#ede9fe",
+    },
+    iconCalendario: {
+        backgroundColor: "#dbeafe",
     },
     icon: {
         fontSize: 28,
