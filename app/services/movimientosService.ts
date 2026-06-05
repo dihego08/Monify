@@ -43,12 +43,17 @@ export async function getSaldoActual(): Promise<number> {
     const gastos = await db.getFirstAsync<{ total: number }>(
         "SELECT SUM(monto) as total FROM GastosMensuales WHERE pagado = 1"
     );
+    const gastosHormiga = await db.getFirstAsync<{ total: number }>(
+        "SELECT SUM(monto) as total FROM GastosHormiga"
+    );
     console.log("Ingresos __:");
     console.log(ingresos);
     console.log("Gastos Pagados__:");
     console.log(gastos);
+    console.log("Gastos Hormiga__:");
+    console.log(gastosHormiga);
     console.log("_________");
-    const total = (ingresos?.total || 0) - (gastos?.total || 0);
+    const total = (ingresos?.total || 0) - (gastos?.total || 0) - (gastosHormiga?.total || 0);
     return total;
 }
 
@@ -475,6 +480,15 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         [`%-${anioStr}`]
     );
 
+    // Gastos Hormiga (fecha es YYYY-MM-DD...)
+    const hormigaAgrupados = await db.getAllAsync<{ mes_num: string, total: number }>(
+        `SELECT strftime('%m', fecha) as mes_num, SUM(monto) as total
+         FROM GastosHormiga
+         WHERE strftime('%Y', fecha) = ?
+         GROUP BY strftime('%m', fecha)`,
+        [anioStr]
+    );
+
     // Ingresos: En ingresos, el campo `fecha` se guarda como "YYYY-MM-DD..."
     const ingresosAgrupados = await db.getAllAsync<{ mes_num: string, total: number }>(
         `SELECT strftime('%m', fecha) as mes_num, SUM(monto) as total
@@ -484,13 +498,20 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         [anioStr]
     );
 
-    // Mapear gastos
     gastosAgrupados.forEach(gasto => {
         // gasto.mes_str es "MM-YYYY", por ejemplo "05-2026"
         const [mesStr] = gasto.mes_str.split('-');
         const item = resultado.find(r => r.mesNum === mesStr);
         if (item) {
-            item.gastos = gasto.total || 0;
+            item.gastos += (gasto.total || 0);
+        }
+    });
+
+    hormigaAgrupados.forEach(hormiga => {
+        // hormiga.mes_num es "01", "02", etc.
+        const item = resultado.find(r => r.mesNum === hormiga.mes_num);
+        if (item) {
+            item.gastos += (hormiga.total || 0);
         }
     });
 
@@ -503,10 +524,33 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         }
     });
 
-    // Retornar solo lo necesario (limpiar mesNum)
     return resultado.map(({ mes, ingresos, gastos }) => ({
         mes,
         ingresos,
         gastos
     }));
+}
+
+// ==========================================
+// Gastos Hormiga
+// ==========================================
+
+export async function addGastoHormiga(monto: number, descripcion: string) {
+    await db.runAsync(
+        "INSERT INTO GastosHormiga (monto, descripcion) VALUES (?, ?)",
+        [monto, descripcion]
+    );
+}
+
+export async function getGastosHormiga() {
+    return await db.getAllAsync<{
+        id: number;
+        monto: number;
+        descripcion: string;
+        fecha: string;
+    }>("SELECT * FROM GastosHormiga ORDER BY id DESC LIMIT 50");
+}
+
+export async function deleteGastoHormiga(id: number) {
+    await db.runAsync("DELETE FROM GastosHormiga WHERE id = ?", [id]);
 }

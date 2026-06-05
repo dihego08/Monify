@@ -35,6 +35,14 @@ export function initDB() {
         FOREIGN KEY(concepto_id) REFERENCES GastosConceptos(id)
       );
 
+    -- ⭐ NUEVA TABLA: Gastos Hormiga
+    CREATE TABLE IF NOT EXISTS GastosHormiga (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        monto REAL NOT NULL,
+        descripcion TEXT,
+        fecha TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+
     -- ⭐ NUEVA TABLA: Lista de Compras
     CREATE TABLE IF NOT EXISTS ListaCompras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

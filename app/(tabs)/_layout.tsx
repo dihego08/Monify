@@ -8,7 +8,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DollarSign, Menu, Wallet } from 'lucide-react-native';
+import { DollarSign, Menu, Wallet, Coffee } from 'lucide-react-native';
 
 const WalkthroughableView = walkthroughable(View);
 
@@ -76,8 +76,15 @@ export default function TabLayout() {
         <Tabs.Screen
           name="records"
           options={{
-            title: 'Gastos',
+            title: 'Pagos',
             tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="hormiga"
+          options={{
+            title: 'Hormiga',
+            tabBarIcon: ({ color, size }) => <Coffee color={color} size={size} />,
           }}
         />
         {/*<Tabs.Screen
