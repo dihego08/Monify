@@ -367,3 +367,146 @@ export async function getEstadisticasGenerales(): Promise<{
             : 0,
     };
 }
+
+/**
+ * Obtener datos para el calendario de reportes (gastos e ingresos)
+ */
+export async function getCalendarioData(anio: number, mes: number): Promise<Record<string, { tieneGasto: boolean, tieneIngreso: boolean }>> {
+    const mesStr = mes.toString().padStart(2, '0');
+    const anioMes = `${anio}-${mesStr}`;
+    
+    // Obtener gastos del mes (usando fecha_limite)
+    const gastos = await db.getAllAsync<{ fecha_limite: string }>(
+        `SELECT fecha_limite FROM GastosMensuales 
+         WHERE fecha_limite LIKE ? AND fecha_limite IS NOT NULL AND fecha_limite != ''`,
+        [`${anioMes}-%`]
+    );
+    
+    // Obtener ingresos del mes (usando fecha)
+    const ingresos = await db.getAllAsync<{ fecha: string }>(
+        `SELECT fecha FROM ingresos 
+         WHERE fecha LIKE ?`,
+        [`${anioMes}-%`]
+    );
+    
+    const data: Record<string, { tieneGasto: boolean, tieneIngreso: boolean }> = {};
+    
+    gastos.forEach(g => {
+        if (g.fecha_limite) {
+            const fechaD = g.fecha_limite.split('T')[0];
+            if (!data[fechaD]) {
+                data[fechaD] = { tieneGasto: false, tieneIngreso: false };
+            }
+            data[fechaD].tieneGasto = true;
+        }
+    });
+    
+    ingresos.forEach(i => {
+        if (i.fecha) {
+            const fechaD = i.fecha.split('T')[0];
+            if (!data[fechaD]) {
+                data[fechaD] = { tieneGasto: false, tieneIngreso: false };
+            }
+            data[fechaD].tieneIngreso = true;
+        }
+    });
+    
+    return data;
+}
+
+/**
+ * Obtener detalle de gastos e ingresos para un día específico
+ */
+export async function getDetalleDiaCalendario(fecha: string): Promise<{
+    gastos: Array<{ id: number, concepto: string, monto: number, pagado: number, tipo: 'gasto' }>,
+    ingresos: Array<{ id: number, concepto: string, monto: number, tipo: 'ingreso' }>
+}> {
+    const gastos = await db.getAllAsync<{ id: number, concepto: string, monto: number, pagado: number }>(
+        `SELECT gm.id, gc.concepto, gm.monto, gm.pagado 
+         FROM GastosMensuales gm
+         JOIN GastosConceptos gc ON gm.concepto_id = gc.id
+         WHERE gm.fecha_limite LIKE ?`,
+        [`${fecha}%`]
+    );
+    
+    // Si la base de datos de ingresos no usa un JOIN de concepto sino que se guarda el texto directo
+    // revisando la función getIngresosMesActual veo que usa JOIN IngresosConceptos
+    // "SELECT i.id, ic.concepto, i.monto, i.fecha, i.otros FROM ingresos i JOIN IngresosConceptos ic ON i.id_concepto = ic.id"
+    const ingresos = await db.getAllAsync<{ id: number, concepto: string, monto: number }>(
+        `SELECT i.id, ic.concepto, i.monto 
+         FROM ingresos i
+         JOIN IngresosConceptos ic ON i.id_concepto = ic.id
+         WHERE i.fecha LIKE ?`,
+        [`${fecha}%`]
+    );
+    
+    return {
+        gastos: gastos.map(g => ({ ...g, tipo: 'gasto' as const })),
+        ingresos: ingresos.map(i => ({ ...i, tipo: 'ingreso' as const }))
+    };
+}
+
+/**
+ * Obtener estadísticas anuales por mes (ingresos vs gastos)
+ */
+export async function getEstadisticasAnuales(anio: number): Promise<Array<{
+    mes: string;
+    ingresos: number;
+    gastos: number;
+}>> {
+    // Inicializar el arreglo de los 12 meses
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const resultado = meses.map((mes, index) => ({
+        mes,
+        mesNum: (index + 1).toString().padStart(2, '0'),
+        ingresos: 0,
+        gastos: 0
+    }));
+
+    const anioStr = anio.toString();
+
+    // Gastos: En GastosMensuales, el campo `mes` se guarda como "MM-YYYY" (ej: "11-2025")
+    // Consideramos todos los gastos (pagados o no) según requerimiento
+    const gastosAgrupados = await db.getAllAsync<{ mes_str: string, total: number }>(
+        `SELECT mes as mes_str, SUM(monto) as total
+         FROM GastosMensuales
+         WHERE mes LIKE ?
+         GROUP BY mes`,
+        [`%-${anioStr}`]
+    );
+
+    // Ingresos: En ingresos, el campo `fecha` se guarda como "YYYY-MM-DD..."
+    const ingresosAgrupados = await db.getAllAsync<{ mes_num: string, total: number }>(
+        `SELECT strftime('%m', fecha) as mes_num, SUM(monto) as total
+         FROM ingresos
+         WHERE strftime('%Y', fecha) = ?
+         GROUP BY strftime('%m', fecha)`,
+        [anioStr]
+    );
+
+    // Mapear gastos
+    gastosAgrupados.forEach(gasto => {
+        // gasto.mes_str es "MM-YYYY", por ejemplo "05-2026"
+        const [mesStr] = gasto.mes_str.split('-');
+        const item = resultado.find(r => r.mesNum === mesStr);
+        if (item) {
+            item.gastos = gasto.total || 0;
+        }
+    });
+
+    // Mapear ingresos
+    ingresosAgrupados.forEach(ingreso => {
+        // ingreso.mes_num es "01", "02", etc.
+        const item = resultado.find(r => r.mesNum === ingreso.mes_num);
+        if (item) {
+            item.ingresos = ingreso.total || 0;
+        }
+    });
+
+    // Retornar solo lo necesario (limpiar mesNum)
+    return resultado.map(({ mes, ingresos, gastos }) => ({
+        mes,
+        ingresos,
+        gastos
+    }));
+}

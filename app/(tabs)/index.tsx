@@ -9,13 +9,15 @@ import {
   TrendingUp,
   XCircle
 } from "lucide-react-native";
-import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState, useEffect } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { initDB } from "../database/database";
+import BarChart, { ChartData } from "../components/BarChart";
 import {
   getEstadisticasMensuales,
   getGastosProximosVencer,
-  getSaldoActual
+  getSaldoActual,
+  getEstadisticasAnuales
 } from "../services/movimientosService";
 
 interface Estadisticas {
@@ -48,6 +50,8 @@ export default function Dashboard() {
   });
   const [gastosVencimiento, setGastosVencimiento] = useState<GastoVencimiento[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [chartYear, setChartYear] = useState(new Date().getFullYear());
+  const [chartData, setChartData] = useState<ChartData[]>([]);
 
   // Inicializar sistema de notificaciones
   useNotifications();
@@ -73,10 +77,24 @@ export default function Dashboard() {
       console.log("Gastos Próximos a Vencer:");
       console.log(gastos);
       setGastosVencimiento(gastos);
+      await cargarGrafico();
     } catch (error) {
       console.error('Error al cargar datos:', error);
     }
   };
+
+  const cargarGrafico = async () => {
+    try {
+      const dataAnual = await getEstadisticasAnuales(chartYear);
+      setChartData(dataAnual);
+    } catch (error) {
+      console.error('Error al cargar grafico:', error);
+    }
+  };
+
+  useEffect(() => {
+    cargarGrafico();
+  }, [chartYear]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -260,6 +278,27 @@ export default function Dashboard() {
           </View>
         </View>
       </View>
+
+      {/* Resumen Anual */}
+      <View style={styles.section}>
+        <View style={styles.chartHeader}>
+          <Text style={styles.sectionTitle}>📈 Resumen Anual</Text>
+          <View style={styles.yearSelector}>
+            <TouchableOpacity onPress={() => setChartYear(y => y - 1)} style={styles.yearButton}>
+              <Text style={styles.yearButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+            <Text style={styles.yearText}>{chartYear}</Text>
+            <TouchableOpacity onPress={() => setChartYear(y => y + 1)} style={styles.yearButton}>
+              <Text style={styles.yearButtonText}>{'>'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.chartCard}>
+          <BarChart data={chartData} />
+        </View>
+      </View>
+      
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -478,5 +517,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6b7280",
     fontWeight: "500",
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  yearSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  yearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  yearButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4b5563',
+  },
+  yearText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginHorizontal: 8,
+  },
+  chartCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
 });

@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { CopilotProvider } from 'react-native-copilot';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -14,22 +15,30 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen
-          name="conceptos/egresos"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="conceptos/ingresos"
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack>
+      <CopilotProvider stopOnOutsideClick androidStatusBarVisible>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen
+            name="conceptos/egresos"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="conceptos/ingresos"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="reportes"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </CopilotProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
