@@ -37,23 +37,9 @@ export function getMesActual(): string {
  * Obtener saldo actual (ingresos - gastos)
  */
 export async function getSaldoActual(): Promise<number> {
-    const ingresos = await db.getFirstAsync<{ total: number }>(
-        "SELECT SUM(monto) as total FROM ingresos"
-    );
-    const gastos = await db.getFirstAsync<{ total: number }>(
-        "SELECT SUM(monto) as total FROM GastosMensuales WHERE pagado = 1"
-    );
-    const gastosHormiga = await db.getFirstAsync<{ total: number }>(
-        "SELECT SUM(monto) as total FROM GastosHormiga"
-    );
-    console.log("Ingresos __:");
-    console.log(ingresos);
-    console.log("Gastos Pagados__:");
-    console.log(gastos);
-    console.log("Gastos Hormiga__:");
-    console.log(gastosHormiga);
-    console.log("_________");
-    const total = (ingresos?.total || 0) - (gastos?.total || 0) - (gastosHormiga?.total || 0);
+    const cuentas = await getSaldosCuentas();
+    const total = cuentas.reduce((acc, cuenta) => acc + cuenta.saldo, 0);
+    console.log("Total global (suma de billeteras):", total);
     return total;
 }
 
@@ -376,7 +362,7 @@ export async function getEstadisticasGenerales(): Promise<{
 /**
  * Obtener datos para el calendario de reportes (gastos e ingresos)
  */
-export async function getCalendarioData(anio: number, mes: number): Promise<Record<string, { tieneGasto: boolean, tieneIngreso: boolean }>> {
+export async function getCalendarioData(anio: number, mes: number): Promise<Record<string, { tieneGasto: boolean, tieneIngreso: boolean, tieneGastoHormiga: boolean }>> {
     const mesStr = mes.toString().padStart(2, '0');
     const anioMes = `${anio}-${mesStr}`;
     
@@ -394,13 +380,19 @@ export async function getCalendarioData(anio: number, mes: number): Promise<Reco
         [`${anioMes}-%`]
     );
     
-    const data: Record<string, { tieneGasto: boolean, tieneIngreso: boolean }> = {};
+    const hormiga = await db.getAllAsync<{ fecha: string }>(
+        `SELECT fecha FROM GastosHormiga 
+         WHERE fecha LIKE ?`,
+        [`${anioMes}-%`]
+    );
+    
+    const data: Record<string, { tieneGasto: boolean, tieneIngreso: boolean, tieneGastoHormiga: boolean }> = {};
     
     gastos.forEach(g => {
         if (g.fecha_limite) {
-            const fechaD = g.fecha_limite.split('T')[0];
+            const fechaD = g.fecha_limite.substring(0, 10);
             if (!data[fechaD]) {
-                data[fechaD] = { tieneGasto: false, tieneIngreso: false };
+                data[fechaD] = { tieneGasto: false, tieneIngreso: false, tieneGastoHormiga: false };
             }
             data[fechaD].tieneGasto = true;
         }
@@ -408,11 +400,21 @@ export async function getCalendarioData(anio: number, mes: number): Promise<Reco
     
     ingresos.forEach(i => {
         if (i.fecha) {
-            const fechaD = i.fecha.split('T')[0];
+            const fechaD = i.fecha.substring(0, 10);
             if (!data[fechaD]) {
-                data[fechaD] = { tieneGasto: false, tieneIngreso: false };
+                data[fechaD] = { tieneGasto: false, tieneIngreso: false, tieneGastoHormiga: false };
             }
             data[fechaD].tieneIngreso = true;
+        }
+    });
+
+    hormiga.forEach(h => {
+        if (h.fecha) {
+            const fechaD = h.fecha.substring(0, 10);
+            if (!data[fechaD]) {
+                data[fechaD] = { tieneGasto: false, tieneIngreso: false, tieneGastoHormiga: false };
+            }
+            data[fechaD].tieneGastoHormiga = true;
         }
     });
     
@@ -424,7 +426,8 @@ export async function getCalendarioData(anio: number, mes: number): Promise<Reco
  */
 export async function getDetalleDiaCalendario(fecha: string): Promise<{
     gastos: Array<{ id: number, concepto: string, monto: number, pagado: number, tipo: 'gasto' }>,
-    ingresos: Array<{ id: number, concepto: string, monto: number, tipo: 'ingreso' }>
+    ingresos: Array<{ id: number, concepto: string, monto: number, tipo: 'ingreso' }>,
+    gastosHormiga: Array<{ id: number, concepto: string, monto: number, tipo: 'hormiga' }>
 }> {
     const gastos = await db.getAllAsync<{ id: number, concepto: string, monto: number, pagado: number }>(
         `SELECT gm.id, gc.concepto, gm.monto, gm.pagado 
@@ -445,9 +448,22 @@ export async function getDetalleDiaCalendario(fecha: string): Promise<{
         [`${fecha}%`]
     );
     
+    const gastosHormiga = await db.getAllAsync<{ id: number, descripcion: string, monto: number }>(
+        `SELECT id, descripcion, monto 
+         FROM GastosHormiga
+         WHERE fecha LIKE ?`,
+        [`${fecha}%`]
+    );
+    
     return {
         gastos: gastos.map(g => ({ ...g, tipo: 'gasto' as const })),
-        ingresos: ingresos.map(i => ({ ...i, tipo: 'ingreso' as const }))
+        ingresos: ingresos.map(i => ({ ...i, tipo: 'ingreso' as const })),
+        gastosHormiga: gastosHormiga.map(h => ({ 
+            id: h.id, 
+            concepto: h.descripcion, 
+            monto: h.monto, 
+            tipo: 'hormiga' as const 
+        }))
     };
 }
 
@@ -458,6 +474,7 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
     mes: string;
     ingresos: number;
     gastos: number;
+    gastosHormiga: number;
 }>> {
     // Inicializar el arreglo de los 12 meses
     const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -465,7 +482,8 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         mes,
         mesNum: (index + 1).toString().padStart(2, '0'),
         ingresos: 0,
-        gastos: 0
+        gastos: 0,
+        gastosHormiga: 0
     }));
 
     const anioStr = anio.toString();
@@ -511,7 +529,7 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         // hormiga.mes_num es "01", "02", etc.
         const item = resultado.find(r => r.mesNum === hormiga.mes_num);
         if (item) {
-            item.gastos += (hormiga.total || 0);
+            item.gastosHormiga = hormiga.total || 0;
         }
     });
 
@@ -524,10 +542,11 @@ export async function getEstadisticasAnuales(anio: number): Promise<Array<{
         }
     });
 
-    return resultado.map(({ mes, ingresos, gastos }) => ({
+    return resultado.map(({ mes, ingresos, gastos, gastosHormiga }) => ({
         mes,
         ingresos,
-        gastos
+        gastos,
+        gastosHormiga
     }));
 }
 

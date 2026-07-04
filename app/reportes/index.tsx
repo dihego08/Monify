@@ -20,6 +20,7 @@ const MONTHS = [
 interface DiaCalendario {
   tieneGasto: boolean;
   tieneIngreso: boolean;
+  tieneGastoHormiga: boolean;
 }
 
 export default function ReportesScreen() {
@@ -27,7 +28,7 @@ export default function ReportesScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarioData, setCalendarioData] = useState<Record<string, DiaCalendario>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [detalle, setDetalle] = useState<{ gastos: any[], ingresos: any[] }>({ gastos: [], ingresos: [] });
+  const [detalle, setDetalle] = useState<{ gastos: any[], ingresos: any[], gastosHormiga: any[] }>({ gastos: [], ingresos: [], gastosHormiga: [] });
   const [loading, setLoading] = useState(false);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
 
@@ -52,13 +53,13 @@ export default function ReportesScreen() {
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     setSelectedDate(null);
-    setDetalle({ gastos: [], ingresos: [] });
+    setDetalle({ gastos: [], ingresos: [], gastosHormiga: [] });
   };
 
   const handleNextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     setSelectedDate(null);
-    setDetalle({ gastos: [], ingresos: [] });
+    setDetalle({ gastos: [], ingresos: [], gastosHormiga: [] });
   };
 
   const handleDayPress = async (day: number) => {
@@ -100,6 +101,7 @@ export default function ReportesScreen() {
       
       const hasGasto = calendarioData[dateKey]?.tieneGasto;
       const hasIngreso = calendarioData[dateKey]?.tieneIngreso;
+      const hasGastoHormiga = calendarioData[dateKey]?.tieneGastoHormiga;
       const isSelected = selectedDate === dateKey;
 
       days.push(
@@ -116,6 +118,7 @@ export default function ReportesScreen() {
           <View style={styles.indicatorsContainer}>
             {hasIngreso && <View style={[styles.indicator, { backgroundColor: '#10b981' }]} />}
             {hasGasto && <View style={[styles.indicator, { backgroundColor: '#ef4444' }]} />}
+            {hasGastoHormiga && <View style={[styles.indicator, { backgroundColor: '#f59e0b' }]} />}
           </View>
         </TouchableOpacity>
       );
@@ -183,6 +186,10 @@ export default function ReportesScreen() {
             <View style={[styles.indicator, { backgroundColor: '#ef4444' }]} />
             <Text style={styles.legendText}>Gastos Programados</Text>
           </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.indicator, { backgroundColor: '#f59e0b' }]} />
+            <Text style={styles.legendText}>Gasto Hormiga</Text>
+          </View>
         </View>
       </View>
 
@@ -196,10 +203,31 @@ export default function ReportesScreen() {
             <ActivityIndicator style={{ marginTop: 20 }} size="small" color="#3b82f6" />
           ) : (
             <>
-              {detalle.ingresos.length === 0 && detalle.gastos.length === 0 ? (
+              {detalle.ingresos.length === 0 && detalle.gastos.length === 0 && (detalle.gastosHormiga || []).length === 0 ? (
                 <Text style={styles.noDataText}>No hay movimientos registrados para este día.</Text>
               ) : (
                 <View style={styles.listContainer}>
+                  <View style={styles.summaryContainer}>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Ingresos</Text>
+                      <Text style={[styles.summaryAmount, { color: '#10b981' }]}>
+                        S/. {detalle.ingresos.reduce((acc, curr) => acc + curr.monto, 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Programados</Text>
+                      <Text style={[styles.summaryAmount, { color: '#ef4444' }]}>
+                        S/. {detalle.gastos.reduce((acc, curr) => acc + curr.monto, 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Hormiga</Text>
+                      <Text style={[styles.summaryAmount, { color: '#f59e0b' }]}>
+                        S/. {(detalle.gastosHormiga || []).reduce((acc, curr) => acc + curr.monto, 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
                   {detalle.ingresos.map(ingreso => (
                     <View key={`ingreso-${ingreso.id}`} style={styles.itemCard}>
                       <View style={[styles.iconContainer, { backgroundColor: '#d1fae5' }]}>
@@ -232,6 +260,21 @@ export default function ReportesScreen() {
                       </View>
                       <Text style={[styles.itemAmount, { color: '#ef4444' }]}>
                         - S/. {gasto.monto.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  {(detalle.gastosHormiga || []).map(hormiga => (
+                    <View key={`hormiga-${hormiga.id}`} style={styles.itemCard}>
+                      <View style={[styles.iconContainer, { backgroundColor: '#fef3c7' }]}>
+                        <CircleDollarSign color="#f59e0b" size={20} />
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemConcept}>{hormiga.concepto}</Text>
+                        <Text style={styles.itemType}>Gasto Hormiga</Text>
+                      </View>
+                      <Text style={[styles.itemAmount, { color: '#f59e0b' }]}>
+                        - S/. {hormiga.monto.toFixed(2)}
                       </Text>
                     </View>
                   ))}
@@ -400,6 +443,30 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     gap: 12,
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  summaryAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   itemCard: {
     flexDirection: 'row',

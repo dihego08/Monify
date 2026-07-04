@@ -5,6 +5,7 @@ export interface ChartData {
   mes: string;
   ingresos: number;
   gastos: number;
+  gastosHormiga?: number;
 }
 
 interface BarChartProps {
@@ -13,7 +14,7 @@ interface BarChartProps {
 
 export default function BarChart({ data }: BarChartProps) {
   const maxValue = Math.max(
-    ...data.map(d => Math.max(d.ingresos, d.gastos)),
+    ...data.map(d => Math.max(d.ingresos, d.gastos, d.gastosHormiga || 0)),
     100 // Minimun scale height
   );
 
@@ -30,6 +31,7 @@ export default function BarChart({ data }: BarChartProps) {
           // Calculamos la altura de cada barra
           const hIngreso = (item.ingresos / maxValue) * chartHeight;
           const hGasto = (item.gastos / maxValue) * chartHeight;
+          const hHormiga = ((item.gastosHormiga || 0) / maxValue) * chartHeight;
 
           return (
             <View key={`chart-col-${index}`} style={styles.column}>
@@ -53,6 +55,16 @@ export default function BarChart({ data }: BarChartProps) {
                   )}
                   <View style={[styles.bar, styles.barGasto, { height: hGasto }]} />
                 </View>
+
+                {/* Barra de Gastos Hormiga */}
+                <View style={styles.barWrapper}>
+                  {(item.gastosHormiga || 0) > 0 && (
+                    <Text style={styles.valueText}>
+                      {(item.gastosHormiga || 0) > 999 ? `${((item.gastosHormiga || 0) / 1000).toFixed(1)}k` : Math.round(item.gastosHormiga || 0)}
+                    </Text>
+                  )}
+                  <View style={[styles.bar, styles.barHormiga, { height: hHormiga }]} />
+                </View>
               </View>
               <Text style={styles.monthLabel}>{item.mes}</Text>
             </View>
@@ -69,6 +81,10 @@ export default function BarChart({ data }: BarChartProps) {
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
           <Text style={styles.legendText}>Gastos</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
+          <Text style={styles.legendText}>Hormiga</Text>
         </View>
       </View>
     </View>
@@ -113,6 +129,9 @@ const styles = StyleSheet.create({
   },
   barGasto: {
     backgroundColor: '#ef4444', // Rojo
+  },
+  barHormiga: {
+    backgroundColor: '#f59e0b', // Naranja
   },
   valueText: {
     fontSize: 9,
